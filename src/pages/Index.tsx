@@ -46,22 +46,6 @@ const Index = () => {
             />
           </div>
 
-          <div className="mt-6 flex items-center gap-3">
-            <Link
-              to="/catalog"
-              className="inline-flex items-center gap-2 rounded-md bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
-            >
-              Start Cataloging
-              <ArrowRight className="h-4 w-4" />
-            </Link>
-            <Link
-              to="/portfolio"
-              className="inline-flex items-center gap-2 rounded-md border border-border bg-card px-5 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-secondary"
-            >
-              <Feather className="h-4 w-4" />
-              Share Your Poems
-            </Link>
-          </div>
         </div>
         <div className="absolute -right-20 -top-20 h-80 w-80 rounded-full bg-accent/5 blur-3xl" />
         <div className="absolute -bottom-20 -left-20 h-60 w-60 rounded-full bg-sage/5 blur-3xl" />
