@@ -32,9 +32,9 @@ function mapPoem(row: any): PoemWithAuthor {
 
 const PAGE_SIZE = 18;
 
-export const usePoems = (options?: { tag?: string | null; search?: string }) => {
+export const usePoems = (options?: { tag?: string | null; search?: string; source?: "all" | "classic" | "community" }) => {
   return useInfiniteQuery({
-    queryKey: ["poems", options?.tag, options?.search],
+    queryKey: ["poems", options?.tag, options?.search, options?.source],
     queryFn: async ({ pageParam = 0 }) => {
       let query = supabase
         .from("poems")
@@ -50,6 +50,12 @@ export const usePoems = (options?: { tag?: string | null; search?: string }) => 
         query = query.or(
           `title.ilike.%${options.search}%,content.ilike.%${options.search}%,author_name.ilike.%${options.search}%`
         );
+      }
+
+      if (options?.source === "classic") {
+        query = query.is("user_id", null);
+      } else if (options?.source === "community") {
+        query = query.not("user_id", "is", null);
       }
 
       const { data, error } = await query;
@@ -104,6 +110,15 @@ export const usePublishPoem = () => {
   return useMutation({
     mutationFn: async (poem: { title: string; content: string; tags: string[] }) => {
       if (!user) throw new Error("Must be signed in");
+
+      // Fetch display name for author_name
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("display_name")
+        .eq("user_id", user.id)
+        .maybeSingle();
+      const authorName = profile?.display_name || user.user_metadata?.full_name || user.email?.split("@")[0] || "Anonymous";
+
       const lines = poem.content.trim().split("\n");
       const excerpt = lines.slice(0, 2).join("\n");
 
@@ -115,6 +130,7 @@ export const usePublishPoem = () => {
           content: poem.content.trim(),
           excerpt: excerpt.length > 120 ? excerpt.substring(0, 120) + "..." : excerpt,
           tags: poem.tags,
+          author_name: authorName,
         })
         .select()
         .single();

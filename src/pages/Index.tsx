@@ -5,15 +5,19 @@ import { usePoems } from "@/hooks/usePoems";
 import { tags } from "@/data/poems";
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { ArrowRight, Feather, Search, Loader2 } from "lucide-react";
+import { ArrowRight, Feather, Search, Loader2, Library, Users } from "lucide-react";
+
+type SourceFilter = "all" | "classic" | "community";
 
 const Index = () => {
   const [activeTag, setActiveTag] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [source, setSource] = useState<SourceFilter>("all");
 
   const { data, isLoading, fetchNextPage, hasNextPage, isFetchingNextPage } = usePoems({
     tag: activeTag,
     search: searchQuery || undefined,
+    source,
   });
 
   const poems = data?.pages.flat() ?? [];
@@ -53,32 +57,56 @@ const Index = () => {
         <div className="absolute -bottom-20 -left-20 h-60 w-60 rounded-full bg-sage/5 blur-3xl" />
       </section>
 
-      {/* Tags */}
+      {/* Filters */}
       <section className="border-b border-border bg-card">
-        <div className="container flex gap-2 overflow-x-auto py-4 scrollbar-none">
-          <button
-            onClick={() => setActiveTag(null)}
-            className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
-              !activeTag
-                ? "bg-primary text-primary-foreground"
-                : "bg-secondary text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            All
-          </button>
-          {tags.map((tag) => (
+        <div className="container py-4 space-y-3">
+          {/* Source filter */}
+          <div className="flex gap-2">
+            {([
+              { key: "all" as SourceFilter, label: "All Poems", icon: null },
+              { key: "classic" as SourceFilter, label: "Classic", icon: Library },
+              { key: "community" as SourceFilter, label: "Community", icon: Users },
+            ]).map(({ key, label, icon: Icon }) => (
+              <button
+                key={key}
+                onClick={() => setSource(key)}
+                className={`flex items-center gap-1.5 shrink-0 rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
+                  source === key
+                    ? "bg-accent text-accent-foreground"
+                    : "bg-secondary text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                {Icon && <Icon className="h-3 w-3" />}
+                {label}
+              </button>
+            ))}
+          </div>
+          {/* Tag filter */}
+          <div className="flex gap-2 overflow-x-auto scrollbar-none">
             <button
-              key={tag}
-              onClick={() => setActiveTag(tag === activeTag ? null : tag)}
-              className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-medium capitalize transition-colors ${
-                tag === activeTag
+              onClick={() => setActiveTag(null)}
+              className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
+                !activeTag
                   ? "bg-primary text-primary-foreground"
                   : "bg-secondary text-muted-foreground hover:text-foreground"
               }`}
             >
-              {tag}
+              All
             </button>
-          ))}
+            {tags.map((tag) => (
+              <button
+                key={tag}
+                onClick={() => setActiveTag(tag === activeTag ? null : tag)}
+                className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-medium capitalize transition-colors ${
+                  tag === activeTag
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-secondary text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                {tag}
+              </button>
+            ))}
+          </div>
         </div>
       </section>
 
