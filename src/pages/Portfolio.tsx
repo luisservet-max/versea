@@ -32,11 +32,12 @@ const Portfolio = () => {
       .filter(Boolean);
 
     try {
-      await publishPoem.mutateAsync({ title, content, tags });
+      await publishPoem.mutateAsync({ title, content, tags, language });
       toast.success("Poem published!");
       setTitle("");
       setContent("");
       setTagsInput("");
+      setLanguage("English");
       setShowForm(false);
     } catch (err: any) {
       toast.error(err.message);
