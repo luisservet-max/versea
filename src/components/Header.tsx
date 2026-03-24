@@ -1,8 +1,10 @@
 import { Link, useLocation } from "react-router-dom";
-import { BookOpen, Feather, Search, User } from "lucide-react";
+import { BookOpen, Feather, Search, User, LogOut } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
 
 const Header = () => {
   const location = useLocation();
+  const { user, signOut } = useAuth();
 
   const navItems = [
     { to: "/", label: "Discover", icon: Search },
@@ -41,12 +43,30 @@ const Header = () => {
         </nav>
 
         <div className="flex items-center gap-2">
-          <Link
-            to="/portfolio"
-            className="flex h-9 w-9 items-center justify-center rounded-full bg-secondary text-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
-          >
-            <User className="h-4 w-4" />
-          </Link>
+          {user ? (
+            <>
+              <Link
+                to="/portfolio"
+                className="flex h-9 w-9 items-center justify-center rounded-full bg-secondary text-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+              >
+                <User className="h-4 w-4" />
+              </Link>
+              <button
+                onClick={signOut}
+                className="flex h-9 w-9 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+                title="Sign out"
+              >
+                <LogOut className="h-4 w-4" />
+              </button>
+            </>
+          ) : (
+            <Link
+              to="/auth"
+              className="rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+            >
+              Sign In
+            </Link>
+          )}
         </div>
       </div>
 
