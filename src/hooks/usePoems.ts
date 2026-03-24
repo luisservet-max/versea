@@ -137,6 +137,7 @@ export const usePublishPoem = () => {
           excerpt: excerpt.length > 120 ? excerpt.substring(0, 120) + "..." : excerpt,
           tags: poem.tags,
           author_name: authorName,
+          language: poem.language || "English",
         })
         .select()
         .single();
