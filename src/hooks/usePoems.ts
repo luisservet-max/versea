@@ -13,6 +13,7 @@ export interface PoemWithAuthor {
   updated_at: string;
   author_name: string;
   is_classic: boolean;
+  language: string;
 }
 
 function mapPoem(row: any): PoemWithAuthor {
