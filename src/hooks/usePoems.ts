@@ -34,7 +34,7 @@ function mapPoem(row: any): PoemWithAuthor {
 
 const PAGE_SIZE = 18;
 
-export const usePoems = (options?: { tag?: string | null; search?: string; source?: "all" | "classic" | "community" }) => {
+export const usePoems = (options?: { tag?: string | null; search?: string; source?: "all" | "classic" | "community"; language?: string | null }) => {
   return useInfiniteQuery({
     queryKey: ["poems", options?.tag, options?.search, options?.source],
     queryFn: async ({ pageParam = 0 }) => {
