@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -31,14 +31,17 @@ function mapPoem(row: any): PoemWithAuthor {
   };
 }
 
+const PAGE_SIZE = 18;
+
 export const usePoems = (options?: { tag?: string | null; search?: string }) => {
-  return useQuery({
+  return useInfiniteQuery({
     queryKey: ["poems", options?.tag, options?.search],
-    queryFn: async () => {
+    queryFn: async ({ pageParam = 0 }) => {
       let query = supabase
         .from("poems")
         .select("*, profiles(display_name)")
-        .order("created_at", { ascending: false });
+        .order("created_at", { ascending: false })
+        .range(pageParam, pageParam + PAGE_SIZE - 1);
 
       if (options?.tag) {
         query = query.contains("tags", [options.tag]);
@@ -53,6 +56,11 @@ export const usePoems = (options?: { tag?: string | null; search?: string }) => 
       const { data, error } = await query;
       if (error) throw error;
       return (data || []).map(mapPoem);
+    },
+    initialPageParam: 0,
+    getNextPageParam: (lastPage, allPages) => {
+      if (lastPage.length < PAGE_SIZE) return undefined;
+      return allPages.flat().length;
     },
   });
 };

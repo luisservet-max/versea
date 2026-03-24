@@ -11,10 +11,12 @@ const Index = () => {
   const [activeTag, setActiveTag] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
 
-  const { data: poems = [], isLoading } = usePoems({
+  const { data, isLoading, fetchNextPage, hasNextPage, isFetchingNextPage } = usePoems({
     tag: activeTag,
     search: searchQuery || undefined,
   });
+
+  const poems = data?.pages.flat() ?? [];
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -95,17 +97,34 @@ const Index = () => {
             <Loader2 className="h-6 w-6 animate-spin text-accent" />
           </div>
         ) : poems.length > 0 ? (
-          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-            {poems.map((poem, i) => (
-              <div
-                key={poem.id}
-                className="animate-fade-in"
-                style={{ animationDelay: `${i * 100}ms` }}
-              >
-                <PoemCard poem={poem} />
+          <>
+            <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+              {poems.map((poem, i) => (
+                <div
+                  key={poem.id}
+                  className="animate-fade-in"
+                  style={{ animationDelay: `${Math.min(i, 5) * 100}ms` }}
+                >
+                  <PoemCard poem={poem} />
+                </div>
+              ))}
+            </div>
+            {hasNextPage && (
+              <div className="mt-8 flex justify-center">
+                <button
+                  onClick={() => fetchNextPage()}
+                  disabled={isFetchingNextPage}
+                  className="inline-flex items-center gap-2 rounded-md bg-secondary px-6 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-secondary/80 disabled:opacity-50"
+                >
+                  {isFetchingNextPage ? (
+                    <><Loader2 className="h-4 w-4 animate-spin" /> Loading...</>
+                  ) : (
+                    "Load More Poems"
+                  )}
+                </button>
               </div>
-            ))}
-          </div>
+            )}
+          </>
         ) : (
           <div className="flex flex-col items-center py-20 text-center">
             <Search className="h-10 w-10 text-muted-foreground/40 mb-3" />
