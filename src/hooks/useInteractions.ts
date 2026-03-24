@@ -133,6 +133,7 @@ export const useSavedPoems = () => {
           updated_at: p.updated_at,
           author_name: p.author_name || "Anonymous",
           is_classic: !p.user_id,
+          language: p.language || "English",
         };
       });
     },

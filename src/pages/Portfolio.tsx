@@ -8,6 +8,8 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
 
+const LANGUAGES = ["English", "Spanish", "French", "German", "Italian", "Portuguese", "Russian", "Chinese", "Japanese", "Arabic", "Hindi", "Korean"];
+
 const Portfolio = () => {
   const { user } = useAuth();
   const { data: userPoems = [], isLoading } = useMyPoems();
@@ -16,6 +18,7 @@ const Portfolio = () => {
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   const [tagsInput, setTagsInput] = useState("");
+  const [language, setLanguage] = useState("English");
 
   const handlePublish = async () => {
     if (!title.trim() || !content.trim()) {
@@ -29,11 +32,12 @@ const Portfolio = () => {
       .filter(Boolean);
 
     try {
-      await publishPoem.mutateAsync({ title, content, tags });
+      await publishPoem.mutateAsync({ title, content, tags, language });
       toast.success("Poem published!");
       setTitle("");
       setContent("");
       setTagsInput("");
+      setLanguage("English");
       setShowForm(false);
     } catch (err: any) {
       toast.error(err.message);
@@ -116,6 +120,18 @@ const Portfolio = () => {
                   maxLength={200}
                   className="mt-1 w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground outline-none focus:ring-2 focus:ring-accent/30"
                 />
+              </div>
+              <div>
+                <label className="text-sm font-medium text-foreground">Language</label>
+                <select
+                  value={language}
+                  onChange={(e) => setLanguage(e.target.value)}
+                  className="mt-1 w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:ring-2 focus:ring-accent/30"
+                >
+                  {LANGUAGES.map((lang) => (
+                    <option key={lang} value={lang}>{lang}</option>
+                  ))}
+                </select>
               </div>
               <div className="flex justify-end gap-2">
                 <button

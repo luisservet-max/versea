@@ -5,19 +5,25 @@ import { usePoems } from "@/hooks/usePoems";
 import { tags } from "@/data/poems";
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { ArrowRight, Feather, Search, Loader2, Library, Users } from "lucide-react";
+import { ArrowRight, Feather, Search, Loader2, Library, Users, Globe } from "lucide-react";
 
 type SourceFilter = "all" | "classic" | "community";
+
+const LANGUAGES = ["English", "Spanish", "French", "German", "Italian", "Portuguese", "Russian", "Chinese", "Japanese", "Arabic", "Hindi", "Korean"];
+
+const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
 const Index = () => {
   const [activeTag, setActiveTag] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [source, setSource] = useState<SourceFilter>("all");
+  const [language, setLanguage] = useState<string | null>(null);
 
   const { data, isLoading, fetchNextPage, hasNextPage, isFetchingNextPage } = usePoems({
     tag: activeTag,
     search: searchQuery || undefined,
     source,
+    language,
   });
 
   const poems = data?.pages.flat() ?? [];
@@ -57,7 +63,6 @@ const Index = () => {
         <div className="absolute -bottom-20 -left-20 h-60 w-60 rounded-full bg-sage/5 blur-3xl" />
       </section>
 
-      {/* Filters */}
       <section className="border-b border-border bg-card">
         <div className="container py-4 space-y-3">
           {/* Source filter */}
@@ -81,6 +86,33 @@ const Index = () => {
               </button>
             ))}
           </div>
+          {/* Language filter */}
+          <div className="flex gap-2 overflow-x-auto scrollbar-none">
+            <button
+              onClick={() => setLanguage(null)}
+              className={`flex items-center gap-1.5 shrink-0 rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
+                !language
+                  ? "bg-accent text-accent-foreground"
+                  : "bg-secondary text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              <Globe className="h-3 w-3" />
+              All Languages
+            </button>
+            {LANGUAGES.map((lang) => (
+              <button
+                key={lang}
+                onClick={() => setLanguage(lang === language ? null : lang)}
+                className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
+                  lang === language
+                    ? "bg-accent text-accent-foreground"
+                    : "bg-secondary text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                {lang}
+              </button>
+            ))}
+          </div>
           {/* Tag filter */}
           <div className="flex gap-2 overflow-x-auto scrollbar-none">
             <button
@@ -97,13 +129,13 @@ const Index = () => {
               <button
                 key={tag}
                 onClick={() => setActiveTag(tag === activeTag ? null : tag)}
-                className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-medium capitalize transition-colors ${
+                className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
                   tag === activeTag
                     ? "bg-primary text-primary-foreground"
                     : "bg-secondary text-muted-foreground hover:text-foreground"
                 }`}
               >
-                {tag}
+                {capitalize(tag)}
               </button>
             ))}
           </div>

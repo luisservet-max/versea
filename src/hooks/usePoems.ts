@@ -13,6 +13,7 @@ export interface PoemWithAuthor {
   updated_at: string;
   author_name: string;
   is_classic: boolean;
+  language: string;
 }
 
 function mapPoem(row: any): PoemWithAuthor {
@@ -27,14 +28,15 @@ function mapPoem(row: any): PoemWithAuthor {
     updated_at: row.updated_at,
     author_name: row.author_name || "Anonymous",
     is_classic: !row.user_id,
+    language: row.language || "English",
   };
 }
 
 const PAGE_SIZE = 18;
 
-export const usePoems = (options?: { tag?: string | null; search?: string; source?: "all" | "classic" | "community" }) => {
+export const usePoems = (options?: { tag?: string | null; search?: string; source?: "all" | "classic" | "community"; language?: string | null }) => {
   return useInfiniteQuery({
-    queryKey: ["poems", options?.tag, options?.search, options?.source],
+    queryKey: ["poems", options?.tag, options?.search, options?.source, options?.language],
     queryFn: async ({ pageParam = 0 }) => {
       let query = supabase
         .from("poems")
@@ -56,6 +58,10 @@ export const usePoems = (options?: { tag?: string | null; search?: string; sourc
         query = query.is("user_id", null);
       } else if (options?.source === "community") {
         query = query.not("user_id", "is", null);
+      }
+
+      if (options?.language) {
+        query = query.eq("language", options.language);
       }
 
       const { data, error } = await query;
@@ -108,7 +114,7 @@ export const usePublishPoem = () => {
   const { user } = useAuth();
 
   return useMutation({
-    mutationFn: async (poem: { title: string; content: string; tags: string[] }) => {
+    mutationFn: async (poem: { title: string; content: string; tags: string[]; language?: string }) => {
       if (!user) throw new Error("Must be signed in");
 
       // Fetch display name for author_name
@@ -131,6 +137,7 @@ export const usePublishPoem = () => {
           excerpt: excerpt.length > 120 ? excerpt.substring(0, 120) + "..." : excerpt,
           tags: poem.tags,
           author_name: authorName,
+          language: poem.language || "English",
         })
         .select()
         .single();
