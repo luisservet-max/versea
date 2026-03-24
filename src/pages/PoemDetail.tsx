@@ -1,7 +1,7 @@
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { useParams, Link, useNavigate } from "react-router-dom";
-import { usePoem } from "@/hooks/usePoems";
+import { usePoem, useDeletePoem } from "@/hooks/usePoems";
 import { useLikeCount, useUserLiked, useToggleLike, useSavedStatus, useToggleSave } from "@/hooks/useInteractions";
 import { useComments, useCommentCount, usePostComment } from "@/hooks/useComments";
 import { useAuth } from "@/contexts/AuthContext";
