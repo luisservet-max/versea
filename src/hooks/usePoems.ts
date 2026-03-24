@@ -88,7 +88,7 @@ export const useMyPoems = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("poems")
-        .select("*, profiles(display_name)")
+        .select("*")
         .eq("user_id", user!.id)
         .order("created_at", { ascending: false });
       if (error) throw error;
