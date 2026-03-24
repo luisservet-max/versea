@@ -16,7 +16,6 @@ export interface PoemWithAuthor {
 }
 
 function mapPoem(row: any): PoemWithAuthor {
-  const profileName = row.profiles?.display_name;
   return {
     id: row.id,
     title: row.title,
@@ -26,7 +25,7 @@ function mapPoem(row: any): PoemWithAuthor {
     user_id: row.user_id,
     created_at: row.created_at,
     updated_at: row.updated_at,
-    author_name: row.author_name || profileName || "Anonymous",
+    author_name: row.author_name || "Anonymous",
     is_classic: !row.user_id,
   };
 }
@@ -39,7 +38,7 @@ export const usePoems = (options?: { tag?: string | null; search?: string }) => 
     queryFn: async ({ pageParam = 0 }) => {
       let query = supabase
         .from("poems")
-        .select("*, profiles(display_name)")
+        .select("*")
         .order("created_at", { ascending: false })
         .range(pageParam, pageParam + PAGE_SIZE - 1);
 
@@ -72,7 +71,7 @@ export const usePoem = (id: string | undefined) => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("poems")
-        .select("*, profiles(display_name)")
+        .select("*")
         .eq("id", id!)
         .single();
       if (error) throw error;
@@ -89,7 +88,7 @@ export const useMyPoems = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("poems")
-        .select("*, profiles(display_name)")
+        .select("*")
         .eq("user_id", user!.id)
         .order("created_at", { ascending: false });
       if (error) throw error;
