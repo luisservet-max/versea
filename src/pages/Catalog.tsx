@@ -1,11 +1,12 @@
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import PoemCard from "@/components/PoemCard";
-import { featuredPoems } from "@/data/poems";
-import { BookOpen } from "lucide-react";
+import { usePoems } from "@/hooks/usePoems";
+import { BookOpen, Loader2 } from "lucide-react";
 
 const Catalog = () => {
-  // For now, show all poems as "cataloged" — will integrate with backend later
+  const { data: poems = [], isLoading } = usePoems();
+
   return (
     <div className="min-h-screen flex flex-col">
       <Header />
@@ -18,19 +19,23 @@ const Catalog = () => {
           Your personal poetry collection. Save poems you love and build your reading library.
         </p>
 
-        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-          {featuredPoems.slice(0, 3).map((poem, i) => (
-            <div
-              key={poem.id}
-              className="animate-fade-in"
-              style={{ animationDelay: `${i * 100}ms` }}
-            >
-              <PoemCard poem={poem} />
-            </div>
-          ))}
-        </div>
-
-        {featuredPoems.length === 0 && (
+        {isLoading ? (
+          <div className="flex items-center justify-center py-20">
+            <Loader2 className="h-6 w-6 animate-spin text-accent" />
+          </div>
+        ) : poems.length > 0 ? (
+          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+            {poems.slice(0, 3).map((poem, i) => (
+              <div
+                key={poem.id}
+                className="animate-fade-in"
+                style={{ animationDelay: `${i * 100}ms` }}
+              >
+                <PoemCard poem={poem} />
+              </div>
+            ))}
+          </div>
+        ) : (
           <div className="flex flex-col items-center py-20 text-center">
             <BookOpen className="h-12 w-12 text-muted-foreground/30 mb-4" />
             <p className="text-muted-foreground">Your catalog is empty. Start discovering poems to save them here.</p>

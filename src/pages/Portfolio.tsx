@@ -1,13 +1,63 @@
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
-import { featuredPoems } from "@/data/poems";
-import { Feather, Plus } from "lucide-react";
+import { useMyPoems, usePublishPoem } from "@/hooks/usePoems";
+import { useAuth } from "@/contexts/AuthContext";
+import { Feather, Plus, Loader2 } from "lucide-react";
 import PoemCard from "@/components/PoemCard";
 import { useState } from "react";
+import { Link } from "react-router-dom";
+import { toast } from "sonner";
 
 const Portfolio = () => {
+  const { user } = useAuth();
+  const { data: userPoems = [], isLoading } = useMyPoems();
+  const publishPoem = usePublishPoem();
   const [showForm, setShowForm] = useState(false);
-  const userPoems = featuredPoems.filter((p) => p.isUserPoem);
+  const [title, setTitle] = useState("");
+  const [content, setContent] = useState("");
+  const [tagsInput, setTagsInput] = useState("");
+
+  const handlePublish = async () => {
+    if (!title.trim() || !content.trim()) {
+      toast.error("Title and content are required");
+      return;
+    }
+
+    const tags = tagsInput
+      .split(",")
+      .map((t) => t.trim().toLowerCase())
+      .filter(Boolean);
+
+    try {
+      await publishPoem.mutateAsync({ title, content, tags });
+      toast.success("Poem published!");
+      setTitle("");
+      setContent("");
+      setTagsInput("");
+      setShowForm(false);
+    } catch (err: any) {
+      toast.error(err.message);
+    }
+  };
+
+  if (!user) {
+    return (
+      <div className="min-h-screen flex flex-col">
+        <Header />
+        <main className="container flex-1 flex flex-col items-center justify-center py-20 text-center">
+          <Feather className="h-12 w-12 text-muted-foreground/30 mb-4" />
+          <p className="text-muted-foreground mb-4">Sign in to write and manage your poems.</p>
+          <Link
+            to="/auth"
+            className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+          >
+            Sign In
+          </Link>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -38,7 +88,10 @@ const Portfolio = () => {
                 <label className="text-sm font-medium text-foreground">Title</label>
                 <input
                   type="text"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
                   placeholder="Give your poem a title..."
+                  maxLength={200}
                   className="mt-1 w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground outline-none focus:ring-2 focus:ring-accent/30"
                 />
               </div>
@@ -46,7 +99,10 @@ const Portfolio = () => {
                 <label className="text-sm font-medium text-foreground">Your Poem</label>
                 <textarea
                   rows={8}
+                  value={content}
+                  onChange={(e) => setContent(e.target.value)}
                   placeholder="Write your verses here..."
+                  maxLength={10000}
                   className="mt-1 w-full resize-none rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground outline-none focus:ring-2 focus:ring-accent/30 font-body"
                 />
               </div>
@@ -54,7 +110,10 @@ const Portfolio = () => {
                 <label className="text-sm font-medium text-foreground">Tags (comma separated)</label>
                 <input
                   type="text"
+                  value={tagsInput}
+                  onChange={(e) => setTagsInput(e.target.value)}
                   placeholder="love, nature, modern..."
+                  maxLength={200}
                   className="mt-1 w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground outline-none focus:ring-2 focus:ring-accent/30"
                 />
               </div>
@@ -65,15 +124,23 @@ const Portfolio = () => {
                 >
                   Cancel
                 </button>
-                <button className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90">
-                  Publish Poem
+                <button
+                  onClick={handlePublish}
+                  disabled={publishPoem.isPending}
+                  className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
+                >
+                  {publishPoem.isPending ? "Publishing..." : "Publish Poem"}
                 </button>
               </div>
             </div>
           </div>
         )}
 
-        {userPoems.length > 0 ? (
+        {isLoading ? (
+          <div className="flex items-center justify-center py-20">
+            <Loader2 className="h-6 w-6 animate-spin text-accent" />
+          </div>
+        ) : userPoems.length > 0 ? (
           <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
             {userPoems.map((poem, i) => (
               <div
