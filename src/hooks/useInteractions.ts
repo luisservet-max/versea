@@ -116,7 +116,7 @@ export const useSavedPoems = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("saved_poems")
-        .select("poem_id, poems(*, profiles(display_name))")
+        .select("poem_id, poems(*)")
         .eq("user_id", user!.id)
         .order("created_at", { ascending: false });
       if (error) throw error;
@@ -131,7 +131,7 @@ export const useSavedPoems = () => {
           user_id: p.user_id,
           created_at: p.created_at,
           updated_at: p.updated_at,
-          author_name: p.author_name || p.profiles?.display_name || "Anonymous",
+          author_name: p.author_name || "Anonymous",
           is_classic: !p.user_id,
         };
       });
