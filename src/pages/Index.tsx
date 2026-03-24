@@ -3,15 +3,96 @@ import Footer from "@/components/Footer";
 import PoemCard from "@/components/PoemCard";
 import { usePoems } from "@/hooks/usePoems";
 import { tags } from "@/data/poems";
-import { useState } from "react";
-import { Link } from "react-router-dom";
-import { ArrowRight, Feather, Search, Loader2, Library, Users, Globe } from "lucide-react";
+import { useState, useRef, useEffect } from "react";
+import { Feather, Search, Loader2, Library, Users, Globe, Tag, ChevronDown, X } from "lucide-react";
 
 type SourceFilter = "all" | "classic" | "community";
 
 const LANGUAGES = ["English", "Spanish", "French", "German", "Italian", "Portuguese", "Russian", "Chinese", "Japanese", "Arabic", "Hindi", "Korean"];
 
 const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+
+interface FilterDropdownProps {
+  label: string;
+  icon: React.ReactNode;
+  value: string | null;
+  options: string[];
+  onChange: (val: string | null) => void;
+  placeholder: string;
+}
+
+const FilterDropdown = ({ label, icon, value, options, onChange, placeholder }: FilterDropdownProps) => {
+  const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState("");
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  const filtered = options.filter((o) => o.toLowerCase().includes(search.toLowerCase()));
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        onClick={() => setOpen(!open)}
+        className={`flex items-center gap-1.5 rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${
+          value
+            ? "border-accent bg-accent/10 text-accent-foreground"
+            : "border-border bg-card text-muted-foreground hover:text-foreground"
+        }`}
+      >
+        {icon}
+        <span>{value || label}</span>
+        {value ? (
+          <X
+            className="h-3.5 w-3.5 ml-1 hover:text-destructive"
+            onClick={(e) => { e.stopPropagation(); onChange(null); setOpen(false); }}
+          />
+        ) : (
+          <ChevronDown className="h-3.5 w-3.5 ml-1" />
+        )}
+      </button>
+      {open && (
+        <div className="absolute left-0 top-full z-50 mt-1 w-56 rounded-lg border border-border bg-popover shadow-md">
+          <div className="flex items-center gap-2 border-b border-border px-3 py-2">
+            <Search className="h-3.5 w-3.5 text-muted-foreground" />
+            <input
+              autoFocus
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder={placeholder}
+              className="flex-1 bg-transparent text-sm text-foreground placeholder:text-muted-foreground outline-none"
+            />
+          </div>
+          <div className="max-h-48 overflow-y-auto p-1">
+            {filtered.length === 0 ? (
+              <p className="px-3 py-2 text-xs text-muted-foreground">No results</p>
+            ) : (
+              filtered.map((opt) => (
+                <button
+                  key={opt}
+                  onClick={() => { onChange(opt); setOpen(false); setSearch(""); }}
+                  className={`w-full rounded-md px-3 py-1.5 text-left text-sm transition-colors ${
+                    opt === value
+                      ? "bg-accent text-accent-foreground"
+                      : "text-foreground hover:bg-secondary"
+                  }`}
+                >
+                  {opt}
+                </button>
+              ))
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
 
 const Index = () => {
   const [activeTag, setActiveTag] = useState<string | null>(null);
@@ -57,88 +138,54 @@ const Index = () => {
               className="flex-1 bg-transparent text-sm text-foreground placeholder:text-muted-foreground outline-none"
             />
           </div>
-
         </div>
         <div className="absolute -right-20 -top-20 h-80 w-80 rounded-full bg-accent/5 blur-3xl" />
         <div className="absolute -bottom-20 -left-20 h-60 w-60 rounded-full bg-sage/5 blur-3xl" />
       </section>
 
       <section className="border-b border-border bg-card">
-        <div className="container py-4 space-y-3">
-          {/* Source filter */}
-          <div className="flex gap-2">
-            {([
-              { key: "all" as SourceFilter, label: "All Poems", icon: null },
-              { key: "classic" as SourceFilter, label: "Classic", icon: Library },
-              { key: "community" as SourceFilter, label: "Community", icon: Users },
-            ]).map(({ key, label, icon: Icon }) => (
-              <button
-                key={key}
-                onClick={() => setSource(key)}
-                className={`flex items-center gap-1.5 shrink-0 rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
-                  source === key
-                    ? "bg-accent text-accent-foreground"
-                    : "bg-secondary text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                {Icon && <Icon className="h-3 w-3" />}
-                {label}
-              </button>
-            ))}
-          </div>
-          {/* Language filter */}
-          <div className="flex gap-2 overflow-x-auto scrollbar-none">
+        <div className="container py-4 flex flex-wrap items-center gap-2">
+          {/* Source filter pills */}
+          {([
+            { key: "all" as SourceFilter, label: "All Poems", icon: null },
+            { key: "classic" as SourceFilter, label: "Classic", icon: Library },
+            { key: "community" as SourceFilter, label: "Community", icon: Users },
+          ]).map(({ key, label, icon: Icon }) => (
             <button
-              onClick={() => setLanguage(null)}
+              key={key}
+              onClick={() => setSource(key)}
               className={`flex items-center gap-1.5 shrink-0 rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
-                !language
+                source === key
                   ? "bg-accent text-accent-foreground"
                   : "bg-secondary text-muted-foreground hover:text-foreground"
               }`}
             >
-              <Globe className="h-3 w-3" />
-              All Languages
+              {Icon && <Icon className="h-3 w-3" />}
+              {label}
             </button>
-            {LANGUAGES.map((lang) => (
-              <button
-                key={lang}
-                onClick={() => setLanguage(lang === language ? null : lang)}
-                className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
-                  lang === language
-                    ? "bg-accent text-accent-foreground"
-                    : "bg-secondary text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                {lang}
-              </button>
-            ))}
-          </div>
-          {/* Tag filter */}
-          <div className="flex gap-2 overflow-x-auto scrollbar-none">
-            <button
-              onClick={() => setActiveTag(null)}
-              className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
-                !activeTag
-                  ? "bg-primary text-primary-foreground"
-                  : "bg-secondary text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              All
-            </button>
-            {tags.map((tag) => (
-              <button
-                key={tag}
-                onClick={() => setActiveTag(tag === activeTag ? null : tag)}
-                className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
-                  tag === activeTag
-                    ? "bg-primary text-primary-foreground"
-                    : "bg-secondary text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                {capitalize(tag)}
-              </button>
-            ))}
-          </div>
+          ))}
+
+          <div className="w-px h-6 bg-border mx-1" />
+
+          {/* Language dropdown */}
+          <FilterDropdown
+            label="Language"
+            icon={<Globe className="h-3.5 w-3.5" />}
+            value={language}
+            options={LANGUAGES}
+            onChange={setLanguage}
+            placeholder="Search languages..."
+          />
+
+          {/* Style/Tag dropdown */}
+          <FilterDropdown
+            label="Style"
+            icon={<Tag className="h-3.5 w-3.5" />}
+            value={activeTag ? capitalize(activeTag) : null}
+            options={tags.map(capitalize)}
+            onChange={(val) => setActiveTag(val ? val.toLowerCase() : null)}
+            placeholder="Search styles..."
+          />
         </div>
       </section>
 
