@@ -8,6 +8,8 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
 
+const LANGUAGES = ["English", "Spanish", "French", "German", "Italian", "Portuguese", "Russian", "Chinese", "Japanese", "Arabic", "Hindi", "Korean"];
+
 const Portfolio = () => {
   const { user } = useAuth();
   const { data: userPoems = [], isLoading } = useMyPoems();
@@ -16,6 +18,7 @@ const Portfolio = () => {
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   const [tagsInput, setTagsInput] = useState("");
+  const [language, setLanguage] = useState("English");
 
   const handlePublish = async () => {
     if (!title.trim() || !content.trim()) {
