@@ -140,6 +140,26 @@ const PoemDetail = () => {
               <Share2 className="h-4 w-4" />
               Share
             </button>
+            {user && poem.user_id === user.id && (
+              <button
+                onClick={() => {
+                  if (window.confirm("Are you sure you want to delete this poem?")) {
+                    deletePoem.mutate(poem.id, {
+                      onSuccess: () => {
+                        toast.success("Poem deleted");
+                        navigate("/portfolio");
+                      },
+                      onError: (err: any) => toast.error(err.message),
+                    });
+                  }
+                }}
+                disabled={deletePoem.isPending}
+                className="flex items-center gap-1.5 rounded-md bg-destructive/10 px-3 py-2 text-sm font-medium text-destructive transition-colors hover:bg-destructive/20 disabled:opacity-50"
+              >
+                <Trash2 className="h-4 w-4" />
+                {deletePoem.isPending ? "Deleting..." : "Delete"}
+              </button>
+            )}
           </div>
 
           {/* Comments */}

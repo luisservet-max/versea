@@ -151,3 +151,18 @@ export const usePublishPoem = () => {
     },
   });
 };
+
+export const useDeletePoem = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (poemId: string) => {
+      const { error } = await supabase.from("poems").delete().eq("id", poemId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["poems"] });
+      queryClient.invalidateQueries({ queryKey: ["my-poems"] });
+    },
+  });
+};
