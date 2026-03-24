@@ -8,10 +8,27 @@ export interface PoemWithAuthor {
   content: string;
   excerpt: string | null;
   tags: string[] | null;
-  user_id: string;
+  user_id: string | null;
   created_at: string;
   updated_at: string;
   author_name: string;
+  is_classic: boolean;
+}
+
+function mapPoem(row: any): PoemWithAuthor {
+  const profileName = row.profiles?.display_name;
+  return {
+    id: row.id,
+    title: row.title,
+    content: row.content,
+    excerpt: row.excerpt,
+    tags: row.tags,
+    user_id: row.user_id,
+    created_at: row.created_at,
+    updated_at: row.updated_at,
+    author_name: row.author_name || profileName || "Anonymous",
+    is_classic: !row.user_id,
+  };
 }
 
 export const usePoems = (options?: { tag?: string | null; search?: string }) => {
@@ -20,7 +37,7 @@ export const usePoems = (options?: { tag?: string | null; search?: string }) => 
     queryFn: async () => {
       let query = supabase
         .from("poems")
-        .select("*, profiles!inner(display_name)")
+        .select("*, profiles(display_name)")
         .order("created_at", { ascending: false });
 
       if (options?.tag) {
@@ -29,24 +46,13 @@ export const usePoems = (options?: { tag?: string | null; search?: string }) => 
 
       if (options?.search) {
         query = query.or(
-          `title.ilike.%${options.search}%,content.ilike.%${options.search}%`
+          `title.ilike.%${options.search}%,content.ilike.%${options.search}%,author_name.ilike.%${options.search}%`
         );
       }
 
       const { data, error } = await query;
       if (error) throw error;
-
-      return (data || []).map((row: any) => ({
-        id: row.id,
-        title: row.title,
-        content: row.content,
-        excerpt: row.excerpt,
-        tags: row.tags,
-        user_id: row.user_id,
-        created_at: row.created_at,
-        updated_at: row.updated_at,
-        author_name: row.profiles?.display_name || "Anonymous",
-      })) as PoemWithAuthor[];
+      return (data || []).map(mapPoem);
     },
   });
 };
@@ -58,23 +64,11 @@ export const usePoem = (id: string | undefined) => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("poems")
-        .select("*, profiles!inner(display_name)")
+        .select("*, profiles(display_name)")
         .eq("id", id!)
         .single();
-
       if (error) throw error;
-
-      return {
-        id: data.id,
-        title: data.title,
-        content: data.content,
-        excerpt: data.excerpt,
-        tags: data.tags,
-        user_id: data.user_id,
-        created_at: data.created_at,
-        updated_at: data.updated_at,
-        author_name: (data as any).profiles?.display_name || "Anonymous",
-      } as PoemWithAuthor;
+      return mapPoem(data);
     },
   });
 };
@@ -87,23 +81,11 @@ export const useMyPoems = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("poems")
-        .select("*, profiles!inner(display_name)")
+        .select("*, profiles(display_name)")
         .eq("user_id", user!.id)
         .order("created_at", { ascending: false });
-
       if (error) throw error;
-
-      return (data || []).map((row: any) => ({
-        id: row.id,
-        title: row.title,
-        content: row.content,
-        excerpt: row.excerpt,
-        tags: row.tags,
-        user_id: row.user_id,
-        created_at: row.created_at,
-        updated_at: row.updated_at,
-        author_name: row.profiles?.display_name || "Anonymous",
-      })) as PoemWithAuthor[];
+      return (data || []).map(mapPoem);
     },
   });
 };
@@ -115,8 +97,8 @@ export const usePublishPoem = () => {
   return useMutation({
     mutationFn: async (poem: { title: string; content: string; tags: string[] }) => {
       if (!user) throw new Error("Must be signed in");
-
-      const excerpt = poem.content.split("\n").slice(0, 2).join("\n");
+      const lines = poem.content.trim().split("\n");
+      const excerpt = lines.slice(0, 2).join("\n");
 
       const { data, error } = await supabase
         .from("poems")
@@ -124,7 +106,7 @@ export const usePublishPoem = () => {
           user_id: user.id,
           title: poem.title.trim(),
           content: poem.content.trim(),
-          excerpt: excerpt.length > 100 ? excerpt.substring(0, 100) + "..." : excerpt,
+          excerpt: excerpt.length > 120 ? excerpt.substring(0, 120) + "..." : excerpt,
           tags: poem.tags,
         })
         .select()

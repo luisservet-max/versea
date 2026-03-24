@@ -1,22 +1,19 @@
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import PoemCard from "@/components/PoemCard";
-import { featuredPoems, tags } from "@/data/poems";
+import { usePoems } from "@/hooks/usePoems";
+import { tags } from "@/data/poems";
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { ArrowRight, Feather, Search } from "lucide-react";
+import { ArrowRight, Feather, Search, Loader2 } from "lucide-react";
 
 const Index = () => {
   const [activeTag, setActiveTag] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
 
-  const filtered = featuredPoems.filter((poem) => {
-    const matchesTag = !activeTag || poem.tags.includes(activeTag);
-    const matchesSearch =
-      !searchQuery ||
-      poem.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      poem.author.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesTag && matchesSearch;
+  const { data: poems = [], isLoading } = usePoems({
+    tag: activeTag,
+    search: searchQuery || undefined,
   });
 
   return (
@@ -38,7 +35,6 @@ const Index = () => {
             Find, catalog, and share poetry. Build your reading collection or share your own verses with a community of poetry lovers.
           </p>
 
-          {/* Search bar */}
           <div className="mt-8 flex w-full max-w-md items-center gap-2 rounded-lg border border-border bg-card px-4 py-2 shadow-sm focus-within:ring-2 focus-within:ring-accent/30">
             <Search className="h-4 w-4 text-muted-foreground" />
             <input
@@ -67,7 +63,6 @@ const Index = () => {
             </Link>
           </div>
         </div>
-        {/* Decorative element */}
         <div className="absolute -right-20 -top-20 h-80 w-80 rounded-full bg-accent/5 blur-3xl" />
         <div className="absolute -bottom-20 -left-20 h-60 w-60 rounded-full bg-sage/5 blur-3xl" />
       </section>
@@ -110,9 +105,14 @@ const Index = () => {
             "Featured Poems"
           )}
         </h2>
-        {filtered.length > 0 ? (
+
+        {isLoading ? (
+          <div className="flex items-center justify-center py-20">
+            <Loader2 className="h-6 w-6 animate-spin text-accent" />
+          </div>
+        ) : poems.length > 0 ? (
           <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-            {filtered.map((poem, i) => (
+            {poems.map((poem, i) => (
               <div
                 key={poem.id}
                 className="animate-fade-in"

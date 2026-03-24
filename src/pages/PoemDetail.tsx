@@ -1,16 +1,30 @@
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { useParams, Link } from "react-router-dom";
-import { featuredPoems } from "@/data/poems";
-import { ArrowLeft, Heart, MessageCircle, Share2, Bookmark } from "lucide-react";
+import { usePoem, useLikeCount, useCommentCount } from "@/hooks/usePoems";
+import { ArrowLeft, Heart, MessageCircle, Share2, Bookmark, Loader2 } from "lucide-react";
 import { useState } from "react";
 
 const PoemDetail = () => {
   const { id } = useParams();
-  const poem = featuredPoems.find((p) => p.id === id);
+  const { data: poem, isLoading } = usePoem(id);
+  const { data: likeCount = 0 } = useLikeCount(id || "");
+  const { data: commentCount = 0 } = useCommentCount(id || "");
   const [liked, setLiked] = useState(false);
   const [saved, setSaved] = useState(false);
   const [comment, setComment] = useState("");
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex flex-col">
+        <Header />
+        <div className="flex-1 flex items-center justify-center">
+          <Loader2 className="h-6 w-6 animate-spin text-accent" />
+        </div>
+        <Footer />
+      </div>
+    );
+  }
 
   if (!poem) {
     return (
@@ -41,8 +55,8 @@ const PoemDetail = () => {
             {poem.title}
           </h1>
           <p className="mt-2 text-muted-foreground">
-            by <span className="font-medium text-foreground">{poem.author}</span>
-            {poem.isUserPoem && (
+            by <span className="font-medium text-foreground">{poem.author_name}</span>
+            {!poem.is_classic && (
               <span className="ml-2 inline-block rounded-full bg-accent/15 px-2 py-0.5 text-xs font-medium text-accent">
                 Community
               </span>
@@ -50,7 +64,7 @@ const PoemDetail = () => {
           </p>
 
           <div className="mt-3 flex flex-wrap gap-1.5">
-            {poem.tags.map((tag) => (
+            {(poem.tags || []).map((tag) => (
               <span
                 key={tag}
                 className="rounded-full bg-secondary px-2.5 py-0.5 text-xs font-medium text-muted-foreground"
@@ -66,7 +80,6 @@ const PoemDetail = () => {
             </pre>
           </div>
 
-          {/* Actions */}
           <div className="mt-6 flex items-center gap-4">
             <button
               onClick={() => setLiked(!liked)}
@@ -77,7 +90,7 @@ const PoemDetail = () => {
               }`}
             >
               <Heart className={`h-4 w-4 ${liked ? "fill-current" : ""}`} />
-              {poem.likes + (liked ? 1 : 0)}
+              {likeCount + (liked ? 1 : 0)}
             </button>
             <button
               onClick={() => setSaved(!saved)}
@@ -96,11 +109,10 @@ const PoemDetail = () => {
             </button>
           </div>
 
-          {/* Comments */}
           <section className="mt-10">
             <h2 className="font-display text-xl font-semibold text-foreground flex items-center gap-2">
               <MessageCircle className="h-5 w-5 text-accent" />
-              Comments ({poem.comments})
+              Comments ({commentCount})
             </h2>
             <div className="mt-4 rounded-lg border border-border bg-card p-4">
               <textarea
