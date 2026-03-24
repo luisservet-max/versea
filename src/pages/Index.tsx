@@ -108,6 +108,21 @@ const Index = () => {
               </div>
             ))}
           </div>
+          {hasNextPage && (
+            <div className="mt-8 flex justify-center">
+              <button
+                onClick={() => fetchNextPage()}
+                disabled={isFetchingNextPage}
+                className="inline-flex items-center gap-2 rounded-md bg-secondary px-6 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-secondary/80 disabled:opacity-50"
+              >
+                {isFetchingNextPage ? (
+                  <><Loader2 className="h-4 w-4 animate-spin" /> Loading...</>
+                ) : (
+                  "Load More Poems"
+                )}
+              </button>
+            </div>
+          )}
         ) : (
           <div className="flex flex-col items-center py-20 text-center">
             <Search className="h-10 w-10 text-muted-foreground/40 mb-3" />
