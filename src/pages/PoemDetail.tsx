@@ -1,11 +1,11 @@
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { useParams, Link, useNavigate } from "react-router-dom";
-import { usePoem } from "@/hooks/usePoems";
+import { usePoem, useDeletePoem } from "@/hooks/usePoems";
 import { useLikeCount, useUserLiked, useToggleLike, useSavedStatus, useToggleSave } from "@/hooks/useInteractions";
 import { useComments, useCommentCount, usePostComment } from "@/hooks/useComments";
 import { useAuth } from "@/contexts/AuthContext";
-import { ArrowLeft, Heart, MessageCircle, Share2, Bookmark, Loader2 } from "lucide-react";
+import { ArrowLeft, Heart, MessageCircle, Share2, Bookmark, Loader2, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { formatDistanceToNow } from "date-fns";
@@ -23,6 +23,7 @@ const PoemDetail = () => {
   const toggleLike = useToggleLike(id || "");
   const toggleSave = useToggleSave(id || "");
   const postComment = usePostComment(id || "");
+  const deletePoem = useDeletePoem();
   const [comment, setComment] = useState("");
 
   const handleLike = () => {
@@ -139,6 +140,26 @@ const PoemDetail = () => {
               <Share2 className="h-4 w-4" />
               Share
             </button>
+            {user && poem.user_id === user.id && (
+              <button
+                onClick={() => {
+                  if (window.confirm("Are you sure you want to delete this poem?")) {
+                    deletePoem.mutate(poem.id, {
+                      onSuccess: () => {
+                        toast.success("Poem deleted");
+                        navigate("/portfolio");
+                      },
+                      onError: (err: any) => toast.error(err.message),
+                    });
+                  }
+                }}
+                disabled={deletePoem.isPending}
+                className="flex items-center gap-1.5 rounded-md bg-destructive/10 px-3 py-2 text-sm font-medium text-destructive transition-colors hover:bg-destructive/20 disabled:opacity-50"
+              >
+                <Trash2 className="h-4 w-4" />
+                {deletePoem.isPending ? "Deleting..." : "Delete"}
+              </button>
+            )}
           </div>
 
           {/* Comments */}
