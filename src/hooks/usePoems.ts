@@ -38,7 +38,7 @@ export const usePoems = (options?: { tag?: string | null; search?: string }) => 
     queryFn: async ({ pageParam = 0 }) => {
       let query = supabase
         .from("poems")
-        .select("*, profiles(display_name)")
+        .select("*")
         .order("created_at", { ascending: false })
         .range(pageParam, pageParam + PAGE_SIZE - 1);
 
