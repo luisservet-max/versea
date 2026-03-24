@@ -60,6 +60,10 @@ export const usePoems = (options?: { tag?: string | null; search?: string; sourc
         query = query.not("user_id", "is", null);
       }
 
+      if (options?.language) {
+        query = query.eq("language", options.language);
+      }
+
       const { data, error } = await query;
       if (error) throw error;
       return (data || []).map(mapPoem);
