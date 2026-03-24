@@ -36,7 +36,7 @@ const PAGE_SIZE = 18;
 
 export const usePoems = (options?: { tag?: string | null; search?: string; source?: "all" | "classic" | "community"; language?: string | null }) => {
   return useInfiniteQuery({
-    queryKey: ["poems", options?.tag, options?.search, options?.source],
+    queryKey: ["poems", options?.tag, options?.search, options?.source, options?.language],
     queryFn: async ({ pageParam = 0 }) => {
       let query = supabase
         .from("poems")
