@@ -71,7 +71,7 @@ export const usePoem = (id: string | undefined) => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("poems")
-        .select("*, profiles(display_name)")
+        .select("*")
         .eq("id", id!)
         .single();
       if (error) throw error;
