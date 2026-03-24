@@ -57,7 +57,7 @@ const PoemCard = ({ poem }: PoemCardProps) => {
             key={tag}
             className="rounded-full bg-secondary px-2.5 py-0.5 text-xs font-medium text-muted-foreground"
           >
-            {tag}
+            {tag.charAt(0).toUpperCase() + tag.slice(1)}
           </span>
         ))}
       </div>
