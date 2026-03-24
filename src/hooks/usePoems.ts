@@ -32,9 +32,9 @@ function mapPoem(row: any): PoemWithAuthor {
 
 const PAGE_SIZE = 18;
 
-export const usePoems = (options?: { tag?: string | null; search?: string }) => {
+export const usePoems = (options?: { tag?: string | null; search?: string; source?: "all" | "classic" | "community" }) => {
   return useInfiniteQuery({
-    queryKey: ["poems", options?.tag, options?.search],
+    queryKey: ["poems", options?.tag, options?.search, options?.source],
     queryFn: async ({ pageParam = 0 }) => {
       let query = supabase
         .from("poems")
@@ -50,6 +50,12 @@ export const usePoems = (options?: { tag?: string | null; search?: string }) => 
         query = query.or(
           `title.ilike.%${options.search}%,content.ilike.%${options.search}%,author_name.ilike.%${options.search}%`
         );
+      }
+
+      if (options?.source === "classic") {
+        query = query.is("user_id", null);
+      } else if (options?.source === "community") {
+        query = query.not("user_id", "is", null);
       }
 
       const { data, error } = await query;
