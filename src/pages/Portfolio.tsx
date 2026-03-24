@@ -136,6 +136,18 @@ const Portfolio = () => {
                   maxLength={10000}
                   className="mt-1 w-full resize-none rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground outline-none focus:ring-2 focus:ring-accent/30 font-body"
                 />
+                <button
+                  type="button"
+                  onClick={handleAnalyze}
+                  disabled={analyzing || !content.trim()}
+                  className="mt-2 inline-flex items-center gap-1.5 rounded-md bg-accent/10 px-3 py-1.5 text-xs font-medium text-accent transition-colors hover:bg-accent/20 disabled:opacity-50"
+                >
+                  {analyzing ? (
+                    <><Loader2 className="h-3 w-3 animate-spin" /> Analyzing...</>
+                  ) : (
+                    <><Sparkles className="h-3 w-3" /> Auto-detect tags &amp; language</>
+                  )}
+                </button>
               </div>
               <div>
                 <label className="text-sm font-medium text-foreground">Tags (comma separated)</label>
