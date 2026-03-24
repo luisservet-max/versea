@@ -5,15 +5,19 @@ import { usePoems } from "@/hooks/usePoems";
 import { tags } from "@/data/poems";
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { ArrowRight, Feather, Search, Loader2 } from "lucide-react";
+import { ArrowRight, Feather, Search, Loader2, Library, Users } from "lucide-react";
+
+type SourceFilter = "all" | "classic" | "community";
 
 const Index = () => {
   const [activeTag, setActiveTag] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [source, setSource] = useState<SourceFilter>("all");
 
   const { data, isLoading, fetchNextPage, hasNextPage, isFetchingNextPage } = usePoems({
     tag: activeTag,
     search: searchQuery || undefined,
+    source,
   });
 
   const poems = data?.pages.flat() ?? [];
