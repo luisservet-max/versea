@@ -2,11 +2,12 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { useMyPoems, usePublishPoem } from "@/hooks/usePoems";
 import { useAuth } from "@/contexts/AuthContext";
-import { Feather, Plus, Loader2 } from "lucide-react";
+import { Feather, Plus, Loader2, Sparkles } from "lucide-react";
 import PoemCard from "@/components/PoemCard";
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 const LANGUAGES = ["English", "Spanish", "French", "German", "Italian", "Portuguese", "Russian", "Chinese", "Japanese", "Arabic", "Hindi", "Korean"];
 
@@ -19,6 +20,32 @@ const Portfolio = () => {
   const [content, setContent] = useState("");
   const [tagsInput, setTagsInput] = useState("");
   const [language, setLanguage] = useState("English");
+  const [analyzing, setAnalyzing] = useState(false);
+
+  const handleAnalyze = async () => {
+    if (!content.trim()) {
+      toast.error("Write your poem first so AI can analyze it");
+      return;
+    }
+    setAnalyzing(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("analyze-poem", {
+        body: { title, content },
+      });
+      if (error) throw error;
+      if (data?.tags?.length) {
+        setTagsInput(data.tags.join(", "));
+      }
+      if (data?.language) {
+        setLanguage(data.language);
+      }
+      toast.success("AI suggestions applied! Feel free to edit them.");
+    } catch (err: any) {
+      toast.error(err.message || "Analysis failed");
+    } finally {
+      setAnalyzing(false);
+    }
+  };
 
   const handlePublish = async () => {
     if (!title.trim() || !content.trim()) {
@@ -109,6 +136,18 @@ const Portfolio = () => {
                   maxLength={10000}
                   className="mt-1 w-full resize-none rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground outline-none focus:ring-2 focus:ring-accent/30 font-body"
                 />
+                <button
+                  type="button"
+                  onClick={handleAnalyze}
+                  disabled={analyzing || !content.trim()}
+                  className="mt-2 inline-flex items-center gap-1.5 rounded-md bg-accent/10 px-3 py-1.5 text-xs font-medium text-accent transition-colors hover:bg-accent/20 disabled:opacity-50"
+                >
+                  {analyzing ? (
+                    <><Loader2 className="h-3 w-3 animate-spin" /> Analyzing...</>
+                  ) : (
+                    <><Sparkles className="h-3 w-3" /> Auto-detect tags &amp; language</>
+                  )}
+                </button>
               </div>
               <div>
                 <label className="text-sm font-medium text-foreground">Tags (comma separated)</label>
