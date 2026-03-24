@@ -16,7 +16,6 @@ export interface PoemWithAuthor {
 }
 
 function mapPoem(row: any): PoemWithAuthor {
-  const profileName = row.profiles?.display_name;
   return {
     id: row.id,
     title: row.title,
@@ -26,7 +25,7 @@ function mapPoem(row: any): PoemWithAuthor {
     user_id: row.user_id,
     created_at: row.created_at,
     updated_at: row.updated_at,
-    author_name: row.author_name || profileName || "Anonymous",
+    author_name: row.author_name || "Anonymous",
     is_classic: !row.user_id,
   };
 }
