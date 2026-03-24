@@ -80,6 +80,7 @@ export type Database = {
       }
       poems: {
         Row: {
+          author_name: string | null
           content: string
           created_at: string
           excerpt: string | null
@@ -87,9 +88,10 @@ export type Database = {
           tags: string[] | null
           title: string
           updated_at: string
-          user_id: string
+          user_id: string | null
         }
         Insert: {
+          author_name?: string | null
           content: string
           created_at?: string
           excerpt?: string | null
@@ -97,9 +99,10 @@ export type Database = {
           tags?: string[] | null
           title: string
           updated_at?: string
-          user_id: string
+          user_id?: string | null
         }
         Update: {
+          author_name?: string | null
           content?: string
           created_at?: string
           excerpt?: string | null
@@ -107,7 +110,7 @@ export type Database = {
           tags?: string[] | null
           title?: string
           updated_at?: string
-          user_id?: string
+          user_id?: string | null
         }
         Relationships: []
       }
