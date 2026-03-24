@@ -5,19 +5,25 @@ import { usePoems } from "@/hooks/usePoems";
 import { tags } from "@/data/poems";
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { ArrowRight, Feather, Search, Loader2, Library, Users } from "lucide-react";
+import { ArrowRight, Feather, Search, Loader2, Library, Users, Globe } from "lucide-react";
 
 type SourceFilter = "all" | "classic" | "community";
+
+const LANGUAGES = ["English", "Spanish", "French", "German", "Italian", "Portuguese", "Russian", "Chinese", "Japanese", "Arabic", "Hindi", "Korean"];
+
+const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
 const Index = () => {
   const [activeTag, setActiveTag] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [source, setSource] = useState<SourceFilter>("all");
+  const [language, setLanguage] = useState<string | null>(null);
 
   const { data, isLoading, fetchNextPage, hasNextPage, isFetchingNextPage } = usePoems({
     tag: activeTag,
     search: searchQuery || undefined,
     source,
+    language,
   });
 
   const poems = data?.pages.flat() ?? [];
