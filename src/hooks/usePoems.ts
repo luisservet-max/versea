@@ -114,7 +114,7 @@ export const usePublishPoem = () => {
   const { user } = useAuth();
 
   return useMutation({
-    mutationFn: async (poem: { title: string; content: string; tags: string[] }) => {
+    mutationFn: async (poem: { title: string; content: string; tags: string[]; language?: string }) => {
       if (!user) throw new Error("Must be signed in");
 
       // Fetch display name for author_name

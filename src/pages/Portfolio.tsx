@@ -121,6 +121,18 @@ const Portfolio = () => {
                   className="mt-1 w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground outline-none focus:ring-2 focus:ring-accent/30"
                 />
               </div>
+              <div>
+                <label className="text-sm font-medium text-foreground">Language</label>
+                <select
+                  value={language}
+                  onChange={(e) => setLanguage(e.target.value)}
+                  className="mt-1 w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:ring-2 focus:ring-accent/30"
+                >
+                  {LANGUAGES.map((lang) => (
+                    <option key={lang} value={lang}>{lang}</option>
+                  ))}
+                </select>
+              </div>
               <div className="flex justify-end gap-2">
                 <button
                   onClick={() => setShowForm(false)}

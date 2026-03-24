@@ -63,7 +63,6 @@ const Index = () => {
         <div className="absolute -bottom-20 -left-20 h-60 w-60 rounded-full bg-sage/5 blur-3xl" />
       </section>
 
-      {/* Filters */}
       <section className="border-b border-border bg-card">
         <div className="container py-4 space-y-3">
           {/* Source filter */}
@@ -87,6 +86,33 @@ const Index = () => {
               </button>
             ))}
           </div>
+          {/* Language filter */}
+          <div className="flex gap-2 overflow-x-auto scrollbar-none">
+            <button
+              onClick={() => setLanguage(null)}
+              className={`flex items-center gap-1.5 shrink-0 rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
+                !language
+                  ? "bg-accent text-accent-foreground"
+                  : "bg-secondary text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              <Globe className="h-3 w-3" />
+              All Languages
+            </button>
+            {LANGUAGES.map((lang) => (
+              <button
+                key={lang}
+                onClick={() => setLanguage(lang === language ? null : lang)}
+                className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
+                  lang === language
+                    ? "bg-accent text-accent-foreground"
+                    : "bg-secondary text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                {lang}
+              </button>
+            ))}
+          </div>
           {/* Tag filter */}
           <div className="flex gap-2 overflow-x-auto scrollbar-none">
             <button
@@ -103,13 +129,13 @@ const Index = () => {
               <button
                 key={tag}
                 onClick={() => setActiveTag(tag === activeTag ? null : tag)}
-                className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-medium capitalize transition-colors ${
+                className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
                   tag === activeTag
                     ? "bg-primary text-primary-foreground"
                     : "bg-secondary text-muted-foreground hover:text-foreground"
                 }`}
               >
-                {tag}
+                {capitalize(tag)}
               </button>
             ))}
           </div>
