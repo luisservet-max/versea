@@ -17,16 +17,30 @@ export const useComments = (poemId: string) => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("comments")
-        .select("*, profiles(display_name)")
+        .select("*")
         .eq("poem_id", poemId)
         .order("created_at", { ascending: true });
       if (error) throw error;
+
+      // Fetch display names for comment authors
+      const userIds = [...new Set((data || []).map((r: any) => r.user_id))];
+      let profileMap: Record<string, string> = {};
+      if (userIds.length > 0) {
+        const { data: profiles } = await supabase
+          .from("profiles")
+          .select("user_id, display_name")
+          .in("user_id", userIds);
+        profileMap = Object.fromEntries(
+          (profiles || []).map((p: any) => [p.user_id, p.display_name])
+        );
+      }
+
       return (data || []).map((row: any) => ({
         id: row.id,
         content: row.content,
         created_at: row.created_at,
         user_id: row.user_id,
-        author_name: row.profiles?.display_name || "Anonymous",
+        author_name: profileMap[row.user_id] || "Anonymous",
       })) as CommentWithAuthor[];
     },
   });
