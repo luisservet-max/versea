@@ -5,7 +5,7 @@ import { usePoem, useDeletePoem } from "@/hooks/usePoems";
 import { useLikeCount, useUserLiked, useToggleLike, useSavedStatus, useToggleSave } from "@/hooks/useInteractions";
 import { useComments, useCommentCount, usePostComment } from "@/hooks/useComments";
 import { useAuth } from "@/contexts/AuthContext";
-import { ArrowLeft, Heart, MessageCircle, Share2, Bookmark, Loader2 } from "lucide-react";
+import { ArrowLeft, Heart, MessageCircle, Share2, Bookmark, Loader2, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { formatDistanceToNow } from "date-fns";
