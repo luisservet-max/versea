@@ -110,6 +110,15 @@ export const usePublishPoem = () => {
   return useMutation({
     mutationFn: async (poem: { title: string; content: string; tags: string[] }) => {
       if (!user) throw new Error("Must be signed in");
+
+      // Fetch display name for author_name
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("display_name")
+        .eq("user_id", user.id)
+        .maybeSingle();
+      const authorName = profile?.display_name || user.user_metadata?.full_name || user.email?.split("@")[0] || "Anonymous";
+
       const lines = poem.content.trim().split("\n");
       const excerpt = lines.slice(0, 2).join("\n");
 
@@ -121,6 +130,7 @@ export const usePublishPoem = () => {
           content: poem.content.trim(),
           excerpt: excerpt.length > 120 ? excerpt.substring(0, 120) + "..." : excerpt,
           tags: poem.tags,
+          author_name: authorName,
         })
         .select()
         .single();
