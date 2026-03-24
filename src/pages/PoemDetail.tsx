@@ -23,6 +23,7 @@ const PoemDetail = () => {
   const toggleLike = useToggleLike(id || "");
   const toggleSave = useToggleSave(id || "");
   const postComment = usePostComment(id || "");
+  const deletePoem = useDeletePoem();
   const [comment, setComment] = useState("");
 
   const handleLike = () => {
