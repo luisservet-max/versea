@@ -1,18 +1,36 @@
 import { Heart, MessageCircle, Share2, Bookmark } from "lucide-react";
 import type { PoemWithAuthor } from "@/hooks/usePoems";
-import { useLikeCount, useCommentCount } from "@/hooks/usePoems";
-import { useState } from "react";
-import { Link } from "react-router-dom";
+import { useLikeCount, useUserLiked, useToggleLike, useSavedStatus, useToggleSave } from "@/hooks/useInteractions";
+import { useCommentCount } from "@/hooks/useComments";
+import { useAuth } from "@/contexts/AuthContext";
+import { Link, useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 
 interface PoemCardProps {
   poem: PoemWithAuthor;
 }
 
 const PoemCard = ({ poem }: PoemCardProps) => {
-  const [liked, setLiked] = useState(false);
-  const [saved, setSaved] = useState(false);
+  const { user } = useAuth();
+  const navigate = useNavigate();
   const { data: likeCount = 0 } = useLikeCount(poem.id);
+  const { data: liked = false } = useUserLiked(poem.id);
+  const { data: saved = false } = useSavedStatus(poem.id);
   const { data: commentCount = 0 } = useCommentCount(poem.id);
+  const toggleLike = useToggleLike(poem.id);
+  const toggleSave = useToggleSave(poem.id);
+
+  const handleLike = () => {
+    if (!user) { navigate("/auth"); return; }
+    toggleLike.mutate(liked);
+  };
+
+  const handleSave = () => {
+    if (!user) { navigate("/auth"); return; }
+    toggleSave.mutate(saved, {
+      onSuccess: () => toast.success(saved ? "Removed from catalog" : "Saved to catalog"),
+    });
+  };
 
   return (
     <article className="group rounded-lg border border-border bg-card p-5 transition-all hover:shadow-md hover:border-accent/40">
@@ -47,13 +65,13 @@ const PoemCard = ({ poem }: PoemCardProps) => {
       <div className="mt-4 flex items-center justify-between border-t border-border pt-3">
         <div className="flex items-center gap-3">
           <button
-            onClick={() => setLiked(!liked)}
+            onClick={handleLike}
             className={`flex items-center gap-1 text-sm transition-colors ${
               liked ? "text-accent" : "text-muted-foreground hover:text-accent"
             }`}
           >
             <Heart className={`h-4 w-4 ${liked ? "fill-current" : ""}`} />
-            {likeCount + (liked ? 1 : 0)}
+            {likeCount}
           </button>
           <Link
             to={`/poem/${poem.id}`}
@@ -65,7 +83,7 @@ const PoemCard = ({ poem }: PoemCardProps) => {
         </div>
         <div className="flex items-center gap-2">
           <button
-            onClick={() => setSaved(!saved)}
+            onClick={handleSave}
             className={`transition-colors ${
               saved ? "text-accent" : "text-muted-foreground hover:text-accent"
             }`}

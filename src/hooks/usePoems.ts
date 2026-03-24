@@ -121,31 +121,3 @@ export const usePublishPoem = () => {
     },
   });
 };
-
-export const useLikeCount = (poemId: string) => {
-  return useQuery({
-    queryKey: ["likes", poemId],
-    queryFn: async () => {
-      const { count, error } = await supabase
-        .from("likes")
-        .select("*", { count: "exact", head: true })
-        .eq("poem_id", poemId);
-      if (error) throw error;
-      return count || 0;
-    },
-  });
-};
-
-export const useCommentCount = (poemId: string) => {
-  return useQuery({
-    queryKey: ["comment-count", poemId],
-    queryFn: async () => {
-      const { count, error } = await supabase
-        .from("comments")
-        .select("*", { count: "exact", head: true })
-        .eq("poem_id", poemId);
-      if (error) throw error;
-      return count || 0;
-    },
-  });
-};

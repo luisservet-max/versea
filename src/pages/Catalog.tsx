@@ -1,11 +1,33 @@
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import PoemCard from "@/components/PoemCard";
-import { usePoems } from "@/hooks/usePoems";
+import { useSavedPoems } from "@/hooks/useInteractions";
+import { useAuth } from "@/contexts/AuthContext";
 import { BookOpen, Loader2 } from "lucide-react";
+import { Link } from "react-router-dom";
 
 const Catalog = () => {
-  const { data: poems = [], isLoading } = usePoems();
+  const { user } = useAuth();
+  const { data: poems = [], isLoading } = useSavedPoems();
+
+  if (!user) {
+    return (
+      <div className="min-h-screen flex flex-col">
+        <Header />
+        <main className="container flex-1 flex flex-col items-center justify-center py-20 text-center">
+          <BookOpen className="h-12 w-12 text-muted-foreground/30 mb-4" />
+          <p className="text-muted-foreground mb-4">Sign in to build your poetry catalog.</p>
+          <Link
+            to="/auth"
+            className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+          >
+            Sign In
+          </Link>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -25,7 +47,7 @@ const Catalog = () => {
           </div>
         ) : poems.length > 0 ? (
           <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-            {poems.slice(0, 3).map((poem, i) => (
+            {poems.map((poem, i) => (
               <div
                 key={poem.id}
                 className="animate-fade-in"
@@ -38,7 +60,7 @@ const Catalog = () => {
         ) : (
           <div className="flex flex-col items-center py-20 text-center">
             <BookOpen className="h-12 w-12 text-muted-foreground/30 mb-4" />
-            <p className="text-muted-foreground">Your catalog is empty. Start discovering poems to save them here.</p>
+            <p className="text-muted-foreground">Your catalog is empty. Discover poems and bookmark them to save here.</p>
           </div>
         )}
       </main>
