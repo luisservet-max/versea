@@ -11,10 +11,12 @@ const Index = () => {
   const [activeTag, setActiveTag] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
 
-  const { data: poems = [], isLoading } = usePoems({
+  const { data, isLoading, fetchNextPage, hasNextPage, isFetchingNextPage } = usePoems({
     tag: activeTag,
     search: searchQuery || undefined,
   });
+
+  const poems = data?.pages.flat() ?? [];
 
   return (
     <div className="min-h-screen flex flex-col">
