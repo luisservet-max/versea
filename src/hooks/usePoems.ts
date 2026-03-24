@@ -28,6 +28,7 @@ function mapPoem(row: any): PoemWithAuthor {
     updated_at: row.updated_at,
     author_name: row.author_name || "Anonymous",
     is_classic: !row.user_id,
+    language: row.language || "English",
   };
 }
 
