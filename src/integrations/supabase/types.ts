@@ -49,6 +49,27 @@ export type Database = {
           },
         ]
       }
+      follows: {
+        Row: {
+          created_at: string
+          follower_id: string
+          following_id: string
+          id: string
+        }
+        Insert: {
+          created_at?: string
+          follower_id: string
+          following_id: string
+          id?: string
+        }
+        Update: {
+          created_at?: string
+          follower_id?: string
+          following_id?: string
+          id?: string
+        }
+        Relationships: []
+      }
       likes: {
         Row: {
           created_at: string
@@ -121,6 +142,7 @@ export type Database = {
         Row: {
           avatar_url: string | null
           bio: string | null
+          catalog_public: boolean
           created_at: string
           display_name: string | null
           id: string
@@ -130,6 +152,7 @@ export type Database = {
         Insert: {
           avatar_url?: string | null
           bio?: string | null
+          catalog_public?: boolean
           created_at?: string
           display_name?: string | null
           id?: string
@@ -139,6 +162,7 @@ export type Database = {
         Update: {
           avatar_url?: string | null
           bio?: string | null
+          catalog_public?: boolean
           created_at?: string
           display_name?: string | null
           id?: string
