@@ -1,11 +1,12 @@
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
+import RelatedPoems from "@/components/RelatedPoems";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { usePoem, useDeletePoem } from "@/hooks/usePoems";
 import { useLikeCount, useUserLiked, useToggleLike, useSavedStatus, useToggleSave } from "@/hooks/useInteractions";
 import { useComments, useCommentCount, usePostComment } from "@/hooks/useComments";
 import { useAuth } from "@/contexts/AuthContext";
-import { ArrowLeft, Heart, MessageCircle, Share2, Bookmark, Loader2, Trash2 } from "lucide-react";
+import { ArrowLeft, Heart, MessageCircle, Share2, Bookmark, Loader2, Trash2, User } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { formatDistanceToNow } from "date-fns";
@@ -36,6 +37,16 @@ const PoemDetail = () => {
     toggleSave.mutate(saved, {
       onSuccess: () => toast.success(saved ? "Removed from catalog" : "Saved to catalog"),
     });
+  };
+
+  const handleShare = async () => {
+    const url = window.location.href;
+    try {
+      await navigator.clipboard.writeText(url);
+      toast.success("Link copied to clipboard!");
+    } catch {
+      toast.error("Failed to copy link");
+    }
   };
 
   const handlePostComment = () => {
@@ -71,6 +82,8 @@ const PoemDetail = () => {
     );
   }
 
+  const isAuthorLinked = !poem.is_classic && poem.user_id;
+
   return (
     <div className="min-h-screen flex flex-col">
       <Header />
@@ -84,19 +97,42 @@ const PoemDetail = () => {
         </Link>
 
         <article className="animate-fade-in">
-          <h1 className="font-display text-3xl font-bold text-foreground md:text-4xl">
+          {/* Author block */}
+          <div className="flex items-center gap-3 mb-6">
+            <div className="h-10 w-10 rounded-full bg-secondary flex items-center justify-center border border-border overflow-hidden">
+              <User className="h-5 w-5 text-muted-foreground" />
+            </div>
+            <div>
+              {isAuthorLinked ? (
+                <Link
+                  to={`/author/${poem.user_id}`}
+                  className="text-sm font-medium text-foreground hover:text-accent transition-colors"
+                >
+                  {poem.author_name}
+                </Link>
+              ) : (
+                <span className="text-sm font-medium text-foreground">
+                  {poem.author_name}
+                </span>
+              )}
+              <div className="flex items-center gap-2">
+                {!poem.is_classic && (
+                  <span className="inline-block rounded-full bg-accent/15 px-2 py-0.5 text-[10px] font-medium text-accent">
+                    Community
+                  </span>
+                )}
+                <span className="text-xs text-muted-foreground">
+                  {formatDistanceToNow(new Date(poem.created_at), { addSuffix: true })}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <h1 className="font-display text-3xl font-bold text-foreground md:text-4xl lg:text-5xl leading-tight">
             {poem.title}
           </h1>
-          <p className="mt-2 text-muted-foreground">
-            by <span className="font-medium text-foreground">{poem.author_name}</span>
-            {!poem.is_classic && (
-              <span className="ml-2 inline-block rounded-full bg-accent/15 px-2 py-0.5 text-xs font-medium text-accent">
-                Community
-              </span>
-            )}
-          </p>
 
-          <div className="mt-3 flex flex-wrap gap-1.5">
+          <div className="mt-4 flex flex-wrap gap-1.5">
             {(poem.tags || []).map((tag) => (
               <span
                 key={tag}
@@ -107,19 +143,21 @@ const PoemDetail = () => {
             ))}
           </div>
 
-          <div className="mt-8 rounded-lg border border-border bg-parchment-warm p-6 md:p-8">
-            <pre className="whitespace-pre-wrap font-body text-base leading-relaxed text-foreground">
+          {/* Poem content */}
+          <div className="mt-8 rounded-xl border border-border bg-parchment-warm p-8 md:p-10 shadow-sm">
+            <pre className="whitespace-pre-wrap font-display text-lg md:text-xl leading-[1.8] text-foreground tracking-wide">
               {poem.content}
             </pre>
           </div>
 
-          <div className="mt-6 flex items-center gap-4">
+          {/* Action bar */}
+          <div className="mt-6 flex items-center gap-3 flex-wrap">
             <button
               onClick={handleLike}
-              className={`flex items-center gap-1.5 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
+              className={`flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-medium transition-all ${
                 liked
-                  ? "bg-accent/10 text-accent"
-                  : "bg-secondary text-muted-foreground hover:text-foreground"
+                  ? "bg-accent/10 text-accent shadow-sm"
+                  : "bg-secondary text-muted-foreground hover:text-foreground hover:bg-secondary/80"
               }`}
             >
               <Heart className={`h-4 w-4 ${liked ? "fill-current" : ""}`} />
@@ -127,16 +165,19 @@ const PoemDetail = () => {
             </button>
             <button
               onClick={handleSave}
-              className={`flex items-center gap-1.5 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
+              className={`flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-medium transition-all ${
                 saved
-                  ? "bg-accent/10 text-accent"
-                  : "bg-secondary text-muted-foreground hover:text-foreground"
+                  ? "bg-accent/10 text-accent shadow-sm"
+                  : "bg-secondary text-muted-foreground hover:text-foreground hover:bg-secondary/80"
               }`}
             >
               <Bookmark className={`h-4 w-4 ${saved ? "fill-current" : ""}`} />
               {saved ? "Saved" : "Save"}
             </button>
-            <button className="flex items-center gap-1.5 rounded-md bg-secondary px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground">
+            <button
+              onClick={handleShare}
+              className="flex items-center gap-1.5 rounded-full bg-secondary px-4 py-2 text-sm font-medium text-muted-foreground transition-all hover:text-foreground hover:bg-secondary/80"
+            >
               <Share2 className="h-4 w-4" />
               Share
             </button>
@@ -154,7 +195,7 @@ const PoemDetail = () => {
                   }
                 }}
                 disabled={deletePoem.isPending}
-                className="flex items-center gap-1.5 rounded-md bg-destructive/10 px-3 py-2 text-sm font-medium text-destructive transition-colors hover:bg-destructive/20 disabled:opacity-50"
+                className="flex items-center gap-1.5 rounded-full bg-destructive/10 px-4 py-2 text-sm font-medium text-destructive transition-all hover:bg-destructive/20 disabled:opacity-50"
               >
                 <Trash2 className="h-4 w-4" />
                 {deletePoem.isPending ? "Deleting..." : "Delete"}
@@ -169,8 +210,7 @@ const PoemDetail = () => {
               Comments ({commentCount})
             </h2>
 
-            {/* Comment form */}
-            <div className="mt-4 rounded-lg border border-border bg-card p-4">
+            <div className="mt-4 rounded-xl border border-border bg-card p-4">
               {user ? (
                 <>
                   <textarea
@@ -179,13 +219,13 @@ const PoemDetail = () => {
                     placeholder="Share your thoughts on this poem..."
                     rows={3}
                     maxLength={2000}
-                    className="w-full resize-none rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground outline-none focus:ring-2 focus:ring-accent/30"
+                    className="w-full resize-none rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground outline-none focus:ring-2 focus:ring-accent/30"
                   />
                   <div className="mt-2 flex justify-end">
                     <button
                       onClick={handlePostComment}
                       disabled={postComment.isPending || !comment.trim()}
-                      className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
+                      className="rounded-full bg-primary px-5 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
                     >
                       {postComment.isPending ? "Posting..." : "Post Comment"}
                     </button>
@@ -198,10 +238,9 @@ const PoemDetail = () => {
               )}
             </div>
 
-            {/* Comment list */}
-            <div className="mt-4 space-y-4">
+            <div className="mt-4 space-y-3">
               {comments.map((c) => (
-                <div key={c.id} className="rounded-lg border border-border bg-card p-4">
+                <div key={c.id} className="rounded-xl border border-border bg-card p-4">
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-sm font-medium text-foreground">{c.author_name}</span>
                     <span className="text-xs text-muted-foreground">
@@ -218,6 +257,13 @@ const PoemDetail = () => {
               )}
             </div>
           </section>
+
+          {/* Related poems */}
+          <RelatedPoems
+            poemId={poem.id}
+            tags={poem.tags}
+            authorName={poem.author_name}
+          />
         </article>
       </main>
       <Footer />
