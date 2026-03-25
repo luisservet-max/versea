@@ -8,8 +8,6 @@ import { Feather, Search, Loader2, Library, Users, Globe, Tag, ChevronDown, X } 
 
 type SourceFilter = "all" | "classic" | "community";
 
-const LANGUAGES = ["English", "Spanish", "French", "German", "Italian", "Portuguese", "Russian", "Chinese", "Japanese", "Arabic", "Hindi", "Korean"];
-
 const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
 interface FilterDropdownProps {
