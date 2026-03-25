@@ -183,7 +183,7 @@ const Index = () => {
             label="Style"
             icon={<Tag className="h-3.5 w-3.5" />}
             value={activeTag ? capitalize(activeTag) : null}
-            options={tags.map(capitalize)}
+            options={availableTags.map(capitalize)}
             onChange={(val) => setActiveTag(val ? val.toLowerCase() : null)}
             placeholder="Search styles..."
           />
