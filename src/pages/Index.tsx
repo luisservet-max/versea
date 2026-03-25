@@ -173,7 +173,7 @@ const Index = () => {
             label="Language"
             icon={<Globe className="h-3.5 w-3.5" />}
             value={language}
-            options={LANGUAGES}
+            options={availableLanguages}
             onChange={setLanguage}
             placeholder="Search languages..."
           />
