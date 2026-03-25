@@ -11,6 +11,7 @@ import Portfolio from "./pages/Portfolio.tsx";
 import Auth from "./pages/Auth.tsx";
 import NotFound from "./pages/NotFound.tsx";
 import AuthorProfilePage from "./pages/AuthorProfile.tsx";
+import ClassicAuthorProfile from "./pages/ClassicAuthorProfile.tsx";
 import Feed from "./pages/Feed.tsx";
 
 const queryClient = new QueryClient();
