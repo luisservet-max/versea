@@ -2,13 +2,11 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import PoemCard from "@/components/PoemCard";
 import { usePoems } from "@/hooks/usePoems";
-import { tags } from "@/data/poems";
+import { useAvailableLanguages, useAvailableTags } from "@/hooks/useFilterOptions";
 import { useState, useRef, useEffect } from "react";
 import { Feather, Search, Loader2, Library, Users, Globe, Tag, ChevronDown, X } from "lucide-react";
 
 type SourceFilter = "all" | "classic" | "community";
-
-const LANGUAGES = ["English", "Spanish", "French", "German", "Italian", "Portuguese", "Russian", "Chinese", "Japanese", "Arabic", "Hindi", "Korean"];
 
 const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
@@ -100,6 +98,9 @@ const Index = () => {
   const [source, setSource] = useState<SourceFilter>("all");
   const [language, setLanguage] = useState<string | null>(null);
 
+  const { data: availableLanguages = [] } = useAvailableLanguages();
+  const { data: availableTags = [] } = useAvailableTags();
+
   const { data, isLoading, fetchNextPage, hasNextPage, isFetchingNextPage } = usePoems({
     tag: activeTag,
     search: searchQuery || undefined,
@@ -172,7 +173,7 @@ const Index = () => {
             label="Language"
             icon={<Globe className="h-3.5 w-3.5" />}
             value={language}
-            options={LANGUAGES}
+            options={availableLanguages}
             onChange={setLanguage}
             placeholder="Search languages..."
           />
@@ -182,7 +183,7 @@ const Index = () => {
             label="Style"
             icon={<Tag className="h-3.5 w-3.5" />}
             value={activeTag ? capitalize(activeTag) : null}
-            options={tags.map(capitalize)}
+            options={availableTags.map(capitalize)}
             onChange={(val) => setActiveTag(val ? val.toLowerCase() : null)}
             placeholder="Search styles..."
           />
