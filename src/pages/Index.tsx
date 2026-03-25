@@ -3,6 +3,7 @@ import Footer from "@/components/Footer";
 import PoemCard from "@/components/PoemCard";
 import { usePoems } from "@/hooks/usePoems";
 import { useAvailableLanguages, useAvailableTags } from "@/hooks/useFilterOptions";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { useState, useRef, useEffect } from "react";
 import { Feather, Search, Loader2, Library, Users, Globe, Tag, ChevronDown, X } from "lucide-react";
 
@@ -17,9 +18,10 @@ interface FilterDropdownProps {
   options: string[];
   onChange: (val: string | null) => void;
   placeholder: string;
+  noResults: string;
 }
 
-const FilterDropdown = ({ label, icon, value, options, onChange, placeholder }: FilterDropdownProps) => {
+const FilterDropdown = ({ label, icon, value, options, onChange, placeholder, noResults }: FilterDropdownProps) => {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
   const ref = useRef<HTMLDivElement>(null);
@@ -69,7 +71,7 @@ const FilterDropdown = ({ label, icon, value, options, onChange, placeholder }: 
           </div>
           <div className="max-h-48 overflow-y-auto p-1">
             {filtered.length === 0 ? (
-              <p className="px-3 py-2 text-xs text-muted-foreground">No results</p>
+              <p className="px-3 py-2 text-xs text-muted-foreground">{noResults}</p>
             ) : (
               filtered.map((opt) => (
                 <button
@@ -93,6 +95,7 @@ const FilterDropdown = ({ label, icon, value, options, onChange, placeholder }: 
 };
 
 const Index = () => {
+  const { t } = useLanguage();
   const [activeTag, setActiveTag] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [source, setSource] = useState<SourceFilter>("all");
@@ -119,14 +122,15 @@ const Index = () => {
         <div className="container relative z-10 flex flex-col items-center text-center">
           <div className="flex items-center gap-2 rounded-full bg-accent/10 px-4 py-1.5 text-sm font-medium text-accent mb-6">
             <Feather className="h-4 w-4" />
-            Your poetry companion
+            {t("hero_badge")}
           </div>
           <h1 className="font-display text-4xl font-bold leading-tight text-foreground md:text-6xl max-w-3xl">
-            Discover the poems that{" "}
-            <span className="italic text-accent">move</span> you
+            {t("hero_title_1")}
+            <span className="italic text-accent">{t("hero_title_accent")}</span>
+            {t("hero_title_2")}
           </h1>
           <p className="mt-4 max-w-lg text-lg text-muted-foreground">
-            Find, catalog, and share poetry. Build your reading collection or share your own verses with a community of poetry lovers.
+            {t("hero_subtitle")}
           </p>
 
           <div className="mt-8 flex w-full max-w-md items-center gap-2 rounded-lg border border-border bg-card px-4 py-2 shadow-sm focus-within:ring-2 focus-within:ring-accent/30">
@@ -135,7 +139,7 @@ const Index = () => {
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search poems or poets..."
+              placeholder={t("hero_search_placeholder")}
               className="flex-1 bg-transparent text-sm text-foreground placeholder:text-muted-foreground outline-none"
             />
           </div>
@@ -146,11 +150,10 @@ const Index = () => {
 
       <section className="border-b border-border bg-card">
         <div className="container py-4 flex flex-wrap items-center gap-2">
-          {/* Source filter pills */}
           {([
-            { key: "all" as SourceFilter, label: "All Poems", icon: null },
-            { key: "classic" as SourceFilter, label: "Classic", icon: Library },
-            { key: "community" as SourceFilter, label: "Community", icon: Users },
+            { key: "all" as SourceFilter, label: t("filter_all"), icon: null },
+            { key: "classic" as SourceFilter, label: t("filter_classic"), icon: Library },
+            { key: "community" as SourceFilter, label: t("filter_community"), icon: Users },
           ]).map(({ key, label, icon: Icon }) => (
             <button
               key={key}
@@ -168,24 +171,24 @@ const Index = () => {
 
           <div className="w-px h-6 bg-border mx-1" />
 
-          {/* Language dropdown */}
           <FilterDropdown
-            label="Language"
+            label={t("filter_language")}
             icon={<Globe className="h-3.5 w-3.5" />}
             value={language}
             options={availableLanguages}
             onChange={setLanguage}
-            placeholder="Search languages..."
+            placeholder={t("filter_search_languages")}
+            noResults={t("no_results")}
           />
 
-          {/* Style/Tag dropdown */}
           <FilterDropdown
-            label="Style"
+            label={t("filter_style")}
             icon={<Tag className="h-3.5 w-3.5" />}
             value={activeTag ? capitalize(activeTag) : null}
             options={availableTags.map(capitalize)}
             onChange={(val) => setActiveTag(val ? val.toLowerCase() : null)}
-            placeholder="Search styles..."
+            placeholder={t("filter_search_styles")}
+            noResults={t("no_results")}
           />
         </div>
       </section>
@@ -194,9 +197,9 @@ const Index = () => {
       <main className="container flex-1 py-10">
         <h2 className="font-display text-2xl font-semibold text-foreground mb-6">
           {activeTag ? (
-            <>Poems tagged <span className="text-accent capitalize">"{activeTag}"</span></>
+            <>{t("poems_tagged")} <span className="text-accent capitalize">"{activeTag}"</span></>
           ) : (
-            "Featured Poems"
+            t("featured_poems")
           )}
         </h2>
 
@@ -225,9 +228,9 @@ const Index = () => {
                   className="inline-flex items-center gap-2 rounded-md bg-secondary px-6 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-secondary/80 disabled:opacity-50"
                 >
                   {isFetchingNextPage ? (
-                    <><Loader2 className="h-4 w-4 animate-spin" /> Loading...</>
+                    <><Loader2 className="h-4 w-4 animate-spin" /> {t("loading")}</>
                   ) : (
-                    "Load More Poems"
+                    t("load_more")
                   )}
                 </button>
               </div>
@@ -236,7 +239,7 @@ const Index = () => {
         ) : (
           <div className="flex flex-col items-center py-20 text-center">
             <Search className="h-10 w-10 text-muted-foreground/40 mb-3" />
-            <p className="text-muted-foreground">No poems found. Try a different search or tag.</p>
+            <p className="text-muted-foreground">{t("no_poems_found")}</p>
           </div>
         )}
       </main>

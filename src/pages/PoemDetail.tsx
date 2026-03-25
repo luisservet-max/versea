@@ -6,15 +6,18 @@ import { usePoem, useDeletePoem } from "@/hooks/usePoems";
 import { useLikeCount, useUserLiked, useToggleLike, useSavedStatus, useToggleSave } from "@/hooks/useInteractions";
 import { useComments, useCommentCount, usePostComment } from "@/hooks/useComments";
 import { useAuth } from "@/contexts/AuthContext";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { ArrowLeft, Heart, MessageCircle, Share2, Bookmark, Loader2, Trash2, User } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { formatDistanceToNow } from "date-fns";
+import { es as esLocale, fr as frLocale } from "date-fns/locale";
 
 const PoemDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { locale, t } = useLanguage();
   const { data: poem, isLoading } = usePoem(id);
   const { data: likeCount = 0 } = useLikeCount(id || "");
   const { data: liked = false } = useUserLiked(id || "");
@@ -27,6 +30,8 @@ const PoemDetail = () => {
   const deletePoem = useDeletePoem();
   const [comment, setComment] = useState("");
 
+  const dateFnsLocale = locale === "es" ? esLocale : locale === "fr" ? frLocale : undefined;
+
   const handleLike = () => {
     if (!user) { navigate("/auth"); return; }
     toggleLike.mutate(liked);
@@ -35,7 +40,7 @@ const PoemDetail = () => {
   const handleSave = () => {
     if (!user) { navigate("/auth"); return; }
     toggleSave.mutate(saved, {
-      onSuccess: () => toast.success(saved ? "Removed from catalog" : "Saved to catalog"),
+      onSuccess: () => toast.success(saved ? t("detail_removed_catalog") : t("detail_saved_catalog")),
     });
   };
 
@@ -43,9 +48,9 @@ const PoemDetail = () => {
     const url = window.location.href;
     try {
       await navigator.clipboard.writeText(url);
-      toast.success("Link copied to clipboard!");
+      toast.success(t("detail_link_copied"));
     } catch {
-      toast.error("Failed to copy link");
+      toast.error(t("detail_link_error"));
     }
   };
 
@@ -53,7 +58,7 @@ const PoemDetail = () => {
     if (!user) { navigate("/auth"); return; }
     if (!comment.trim()) return;
     postComment.mutate(comment, {
-      onSuccess: () => { setComment(""); toast.success("Comment posted!"); },
+      onSuccess: () => { setComment(""); toast.success(t("detail_comment_posted")); },
       onError: (err: any) => toast.error(err.message),
     });
   };
@@ -75,7 +80,7 @@ const PoemDetail = () => {
       <div className="min-h-screen flex flex-col">
         <Header />
         <div className="flex-1 flex items-center justify-center">
-          <p className="text-muted-foreground">Poem not found.</p>
+          <p className="text-muted-foreground">{t("no_poems_found")}</p>
         </div>
         <Footer />
       </div>
@@ -93,7 +98,7 @@ const PoemDetail = () => {
           className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors mb-8"
         >
           <ArrowLeft className="h-4 w-4" />
-          Back to Discover
+          {t("detail_back")}
         </Link>
 
         <article className="animate-fade-in">
@@ -118,11 +123,11 @@ const PoemDetail = () => {
               <div className="flex items-center gap-2">
                 {!poem.is_classic && (
                   <span className="inline-block rounded-full bg-accent/15 px-2 py-0.5 text-[10px] font-medium text-accent">
-                    Community
+                    {t("community_badge")}
                   </span>
                 )}
                 <span className="text-xs text-muted-foreground">
-                  {formatDistanceToNow(new Date(poem.created_at), { addSuffix: true })}
+                  {formatDistanceToNow(new Date(poem.created_at), { addSuffix: true, locale: dateFnsLocale })}
                 </span>
               </div>
             </div>
@@ -172,22 +177,22 @@ const PoemDetail = () => {
               }`}
             >
               <Bookmark className={`h-4 w-4 ${saved ? "fill-current" : ""}`} />
-              {saved ? "Saved" : "Save"}
+              {saved ? t("detail_saved") : t("detail_save")}
             </button>
             <button
               onClick={handleShare}
               className="flex items-center gap-1.5 rounded-full bg-secondary px-4 py-2 text-sm font-medium text-muted-foreground transition-all hover:text-foreground hover:bg-secondary/80"
             >
               <Share2 className="h-4 w-4" />
-              Share
+              {t("detail_share")}
             </button>
             {user && poem.user_id === user.id && (
               <button
                 onClick={() => {
-                  if (window.confirm("Are you sure you want to delete this poem?")) {
+                  if (window.confirm(t("detail_delete_confirm"))) {
                     deletePoem.mutate(poem.id, {
                       onSuccess: () => {
-                        toast.success("Poem deleted");
+                        toast.success(t("detail_deleted"));
                         navigate("/portfolio");
                       },
                       onError: (err: any) => toast.error(err.message),
@@ -198,7 +203,7 @@ const PoemDetail = () => {
                 className="flex items-center gap-1.5 rounded-full bg-destructive/10 px-4 py-2 text-sm font-medium text-destructive transition-all hover:bg-destructive/20 disabled:opacity-50"
               >
                 <Trash2 className="h-4 w-4" />
-                {deletePoem.isPending ? "Deleting..." : "Delete"}
+                {deletePoem.isPending ? t("detail_deleting") : t("detail_delete")}
               </button>
             )}
           </div>
@@ -207,7 +212,7 @@ const PoemDetail = () => {
           <section className="mt-10">
             <h2 className="font-display text-xl font-semibold text-foreground flex items-center gap-2">
               <MessageCircle className="h-5 w-5 text-accent" />
-              Comments ({commentCount})
+              {t("detail_comments")} ({commentCount})
             </h2>
 
             <div className="mt-4 rounded-xl border border-border bg-card p-4">
@@ -216,7 +221,7 @@ const PoemDetail = () => {
                   <textarea
                     value={comment}
                     onChange={(e) => setComment(e.target.value)}
-                    placeholder="Share your thoughts on this poem..."
+                    placeholder={t("detail_comment_placeholder")}
                     rows={3}
                     maxLength={2000}
                     className="w-full resize-none rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground outline-none focus:ring-2 focus:ring-accent/30"
@@ -227,13 +232,14 @@ const PoemDetail = () => {
                       disabled={postComment.isPending || !comment.trim()}
                       className="rounded-full bg-primary px-5 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
                     >
-                      {postComment.isPending ? "Posting..." : "Post Comment"}
+                      {postComment.isPending ? t("detail_posting") : t("detail_post_comment")}
                     </button>
                   </div>
                 </>
               ) : (
                 <p className="text-center text-sm text-muted-foreground py-2">
-                  <Link to="/auth" className="text-accent hover:underline">Sign in</Link> to post a comment.
+                  <Link to="/auth" className="text-accent hover:underline">{t("detail_sign_in_comment")}</Link>
+                  {t("detail_to_comment")}
                 </p>
               )}
             </div>
@@ -244,7 +250,7 @@ const PoemDetail = () => {
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-sm font-medium text-foreground">{c.author_name}</span>
                     <span className="text-xs text-muted-foreground">
-                      {formatDistanceToNow(new Date(c.created_at), { addSuffix: true })}
+                      {formatDistanceToNow(new Date(c.created_at), { addSuffix: true, locale: dateFnsLocale })}
                     </span>
                   </div>
                   <p className="text-sm text-foreground/80 whitespace-pre-wrap">{c.content}</p>
@@ -252,7 +258,7 @@ const PoemDetail = () => {
               ))}
               {comments.length === 0 && (
                 <p className="text-center text-sm text-muted-foreground py-4">
-                  No comments yet. Be the first to share your thoughts!
+                  {t("detail_no_comments")}
                 </p>
               )}
             </div>
