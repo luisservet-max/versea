@@ -14,6 +14,39 @@ export type Database = {
   }
   public: {
     Tables: {
+      classic_authors: {
+        Row: {
+          bio: string | null
+          birth_year: number | null
+          created_at: string
+          death_year: number | null
+          id: string
+          image_url: string | null
+          name: string
+          nationality: string | null
+        }
+        Insert: {
+          bio?: string | null
+          birth_year?: number | null
+          created_at?: string
+          death_year?: number | null
+          id?: string
+          image_url?: string | null
+          name: string
+          nationality?: string | null
+        }
+        Update: {
+          bio?: string | null
+          birth_year?: number | null
+          created_at?: string
+          death_year?: number | null
+          id?: string
+          image_url?: string | null
+          name?: string
+          nationality?: string | null
+        }
+        Relationships: []
+      }
       comments: {
         Row: {
           content: string
