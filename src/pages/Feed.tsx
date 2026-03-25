@@ -1,22 +1,27 @@
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { useAuth } from "@/contexts/AuthContext";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { useActivityFeed, useFollowingList } from "@/hooks/useFollows";
 import { Link } from "react-router-dom";
 import { Activity, Feather, Heart, MessageCircle, Bookmark, Loader2, Users } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
-
-const typeConfig = {
-  poem: { icon: Feather, verb: "published", color: "text-accent" },
-  like: { icon: Heart, verb: "liked", color: "text-red-400" },
-  comment: { icon: MessageCircle, verb: "commented on", color: "text-blue-400" },
-  save: { icon: Bookmark, verb: "saved", color: "text-amber-400" },
-};
+import { es as esLocale, fr as frLocale } from "date-fns/locale";
 
 const Feed = () => {
   const { user } = useAuth();
+  const { locale, t } = useLanguage();
   const { data: followingIds = [] } = useFollowingList();
   const { data: feed = [], isLoading } = useActivityFeed();
+
+  const dateFnsLocale = locale === "es" ? esLocale : locale === "fr" ? frLocale : undefined;
+
+  const typeConfig = {
+    poem: { icon: Feather, verb: t("feed_published"), color: "text-accent" },
+    like: { icon: Heart, verb: t("feed_liked"), color: "text-red-400" },
+    comment: { icon: MessageCircle, verb: t("feed_commented"), color: "text-blue-400" },
+    save: { icon: Bookmark, verb: t("feed_saved"), color: "text-amber-400" },
+  };
 
   if (!user) {
     return (
@@ -24,12 +29,12 @@ const Feed = () => {
         <Header />
         <main className="container flex-1 flex flex-col items-center justify-center py-20 text-center">
           <Activity className="h-12 w-12 text-muted-foreground/30 mb-4" />
-          <p className="text-muted-foreground mb-4">Sign in to see what people you follow are up to.</p>
+          <p className="text-muted-foreground mb-4">{t("feed_sign_in_prompt")}</p>
           <Link
             to="/auth"
             className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
           >
-            Sign In
+            {t("nav_sign_in")}
           </Link>
         </main>
         <Footer />
@@ -43,24 +48,24 @@ const Feed = () => {
       <main className="container flex-1 py-10 max-w-2xl">
         <div className="flex items-center gap-3 mb-2">
           <Activity className="h-6 w-6 text-accent" />
-          <h1 className="font-display text-3xl font-bold text-foreground">Feed</h1>
+          <h1 className="font-display text-3xl font-bold text-foreground">{t("feed_title")}</h1>
         </div>
         <p className="text-muted-foreground mb-8">
-          See what people you follow are reading, writing, and loving.
+          {t("feed_subtitle")}
         </p>
 
         {followingIds.length === 0 ? (
           <div className="flex flex-col items-center py-20 text-center">
             <Users className="h-12 w-12 text-muted-foreground/30 mb-4" />
-            <p className="text-muted-foreground mb-2">You're not following anyone yet.</p>
+            <p className="text-muted-foreground mb-2">{t("feed_no_following")}</p>
             <p className="text-sm text-muted-foreground/70">
-              Visit a poet's profile and hit Follow to see their activity here.
+              {t("feed_no_following_hint")}
             </p>
             <Link
               to="/"
               className="mt-4 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
             >
-              Discover Poems
+              {t("feed_discover")}
             </Link>
           </div>
         ) : isLoading ? (
@@ -70,7 +75,7 @@ const Feed = () => {
         ) : feed.length === 0 ? (
           <div className="flex flex-col items-center py-20 text-center">
             <Activity className="h-12 w-12 text-muted-foreground/30 mb-4" />
-            <p className="text-muted-foreground">No activity from people you follow yet.</p>
+            <p className="text-muted-foreground">{t("feed_no_activity")}</p>
           </div>
         ) : (
           <div className="space-y-1">
@@ -112,7 +117,7 @@ const Feed = () => {
                       </p>
                     )}
                     <p className="mt-1 text-xs text-muted-foreground/60">
-                      {formatDistanceToNow(new Date(item.created_at), { addSuffix: true })}
+                      {formatDistanceToNow(new Date(item.created_at), { addSuffix: true, locale: dateFnsLocale })}
                     </p>
                   </div>
                 </div>

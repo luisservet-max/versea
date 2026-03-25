@@ -3,6 +3,7 @@ import type { PoemWithAuthor } from "@/hooks/usePoems";
 import { useLikeCount, useUserLiked, useToggleLike, useSavedStatus, useToggleSave } from "@/hooks/useInteractions";
 import { useCommentCount } from "@/hooks/useComments";
 import { useAuth } from "@/contexts/AuthContext";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { Link, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 
@@ -12,6 +13,7 @@ interface PoemCardProps {
 
 const PoemCard = ({ poem }: PoemCardProps) => {
   const { user } = useAuth();
+  const { t } = useLanguage();
   const navigate = useNavigate();
   const { data: likeCount = 0 } = useLikeCount(poem.id);
   const { data: liked = false } = useUserLiked(poem.id);
@@ -28,7 +30,7 @@ const PoemCard = ({ poem }: PoemCardProps) => {
   const handleSave = () => {
     if (!user) { navigate("/auth"); return; }
     toggleSave.mutate(saved, {
-      onSuccess: () => toast.success(saved ? "Removed from catalog" : "Saved to catalog"),
+      onSuccess: () => toast.success(saved ? t("detail_removed_catalog") : t("detail_saved_catalog")),
     });
   };
 
@@ -41,7 +43,7 @@ const PoemCard = ({ poem }: PoemCardProps) => {
       </Link>
 
       <p className="mt-1 text-sm">
-        <span className="text-muted-foreground">by </span>
+        <span className="text-muted-foreground">{t("by")} </span>
         {!poem.is_classic && poem.user_id ? (
           <Link
             to={`/author/${poem.user_id}`}
@@ -63,7 +65,7 @@ const PoemCard = ({ poem }: PoemCardProps) => {
         )}
         {!poem.is_classic && (
           <span className="ml-2 inline-block rounded-full bg-accent/15 px-2 py-0.5 text-xs font-medium text-accent">
-            Community
+            {t("community_badge")}
           </span>
         )}
       </p>

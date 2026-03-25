@@ -4,6 +4,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { LanguageProvider } from "@/contexts/LanguageContext";
 import Index from "./pages/Index.tsx";
 import PoemDetail from "./pages/PoemDetail.tsx";
 import Catalog from "./pages/Catalog.tsx";
@@ -18,25 +19,27 @@ const queryClient = new QueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <AuthProvider>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
-          <Routes>
-            <Route path="/" element={<Index />} />
-            <Route path="/auth" element={<Auth />} />
-            <Route path="/poem/:id" element={<PoemDetail />} />
-            <Route path="/author/:userId" element={<AuthorProfilePage />} />
-            <Route path="/classic-author/:authorName" element={<ClassicAuthorProfile />} />
-            <Route path="/feed" element={<Feed />} />
-            <Route path="/catalog" element={<Catalog />} />
-            <Route path="/portfolio" element={<Portfolio />} />
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </BrowserRouter>
-      </TooltipProvider>
-    </AuthProvider>
+    <LanguageProvider>
+      <AuthProvider>
+        <TooltipProvider>
+          <Toaster />
+          <Sonner />
+          <BrowserRouter>
+            <Routes>
+              <Route path="/" element={<Index />} />
+              <Route path="/auth" element={<Auth />} />
+              <Route path="/poem/:id" element={<PoemDetail />} />
+              <Route path="/author/:userId" element={<AuthorProfilePage />} />
+              <Route path="/classic-author/:authorName" element={<ClassicAuthorProfile />} />
+              <Route path="/feed" element={<Feed />} />
+              <Route path="/catalog" element={<Catalog />} />
+              <Route path="/portfolio" element={<Portfolio />} />
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </BrowserRouter>
+        </TooltipProvider>
+      </AuthProvider>
+    </LanguageProvider>
   </QueryClientProvider>
 );
 
