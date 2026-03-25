@@ -10,6 +10,7 @@ import Catalog from "./pages/Catalog.tsx";
 import Portfolio from "./pages/Portfolio.tsx";
 import Auth from "./pages/Auth.tsx";
 import NotFound from "./pages/NotFound.tsx";
+import AuthorProfilePage from "./pages/AuthorProfile.tsx";
 
 const queryClient = new QueryClient();
 
@@ -24,6 +25,7 @@ const App = () => (
             <Route path="/" element={<Index />} />
             <Route path="/auth" element={<Auth />} />
             <Route path="/poem/:id" element={<PoemDetail />} />
+            <Route path="/author/:userId" element={<AuthorProfilePage />} />
             <Route path="/catalog" element={<Catalog />} />
             <Route path="/portfolio" element={<Portfolio />} />
             <Route path="*" element={<NotFound />} />
