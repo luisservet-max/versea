@@ -38,23 +38,28 @@ const PoemCard = ({ poem }: PoemCardProps) => {
         <h3 className="font-display text-lg font-semibold text-foreground group-hover:text-accent transition-colors">
           {poem.title}
         </h3>
-        <pre className="mt-3 whitespace-pre-wrap font-body text-sm leading-relaxed text-foreground/80 line-clamp-4">
-          {poem.excerpt || poem.content.split("\n").slice(0, 2).join("\n")}
-        </pre>
       </Link>
 
-      <p className="mt-1 text-sm text-muted-foreground">
-        by{" "}
+      <p className="mt-1 text-sm">
+        <span className="text-muted-foreground">by </span>
         {!poem.is_classic && poem.user_id ? (
           <Link
             to={`/author/${poem.user_id}`}
-            className="font-medium hover:text-accent transition-colors"
+            className="font-medium text-accent/80 hover:text-accent transition-colors"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {poem.author_name}
+          </Link>
+        ) : poem.is_classic ? (
+          <Link
+            to={`/classic-author/${encodeURIComponent(poem.author_name || "Unknown")}`}
+            className="font-medium text-accent/80 hover:text-accent transition-colors"
             onClick={(e) => e.stopPropagation()}
           >
             {poem.author_name}
           </Link>
         ) : (
-          <span>{poem.author_name}</span>
+          <span className="font-medium text-accent/80">{poem.author_name}</span>
         )}
         {!poem.is_classic && (
           <span className="ml-2 inline-block rounded-full bg-accent/15 px-2 py-0.5 text-xs font-medium text-accent">
@@ -62,6 +67,12 @@ const PoemCard = ({ poem }: PoemCardProps) => {
           </span>
         )}
       </p>
+
+      <Link to={`/poem/${poem.id}`} className="block">
+        <pre className="mt-2 whitespace-pre-wrap font-body text-sm leading-relaxed text-foreground/80 line-clamp-4">
+          {poem.excerpt || poem.content.split("\n").slice(0, 2).join("\n")}
+        </pre>
+      </Link>
 
       <div className="mt-4 flex flex-wrap gap-1.5">
         {(poem.tags || []).slice(0, 3).map((tag) => (
