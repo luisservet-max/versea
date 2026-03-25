@@ -2,7 +2,7 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import PoemCard from "@/components/PoemCard";
 import { usePoems } from "@/hooks/usePoems";
-import { tags } from "@/data/poems";
+import { useAvailableLanguages, useAvailableTags } from "@/hooks/useFilterOptions";
 import { useState, useRef, useEffect } from "react";
 import { Feather, Search, Loader2, Library, Users, Globe, Tag, ChevronDown, X } from "lucide-react";
 
