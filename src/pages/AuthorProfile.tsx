@@ -3,12 +3,33 @@ import Footer from "@/components/Footer";
 import PoemCard from "@/components/PoemCard";
 import { useParams, Link } from "react-router-dom";
 import { useAuthorProfile, useAuthorPoems } from "@/hooks/useAuthor";
-import { ArrowLeft, Heart, BookOpen, Loader2, User } from "lucide-react";
+import { useFollowStatus, useToggleFollow, useFollowerCount, useFollowingCount, useUserSavedPoems } from "@/hooks/useFollows";
+import { useAuth } from "@/contexts/AuthContext";
+import { ArrowLeft, Heart, BookOpen, Loader2, User, UserPlus, UserMinus, Users, Bookmark, Lock } from "lucide-react";
+import { useState } from "react";
+import { toast } from "sonner";
 
 const AuthorProfile = () => {
   const { userId } = useParams();
+  const { user } = useAuth();
   const { data: author, isLoading } = useAuthorProfile(userId);
   const { data: poems = [] } = useAuthorPoems(userId);
+  const { data: isFollowing } = useFollowStatus(userId);
+  const toggleFollow = useToggleFollow(userId || "");
+  const { data: followerCount = 0 } = useFollowerCount(userId);
+  const { data: followingCount = 0 } = useFollowingCount(userId);
+  const { data: savedData } = useUserSavedPoems(userId);
+  const [activeTab, setActiveTab] = useState<"poems" | "catalog">("poems");
+
+  const handleFollow = () => {
+    if (!user) {
+      toast.info("Sign in to follow authors");
+      return;
+    }
+    toggleFollow.mutate(!!isFollowing, {
+      onSuccess: () => toast.success(isFollowing ? "Unfollowed" : "Following!"),
+    });
+  };
 
   if (isLoading) {
     return (
@@ -33,6 +54,8 @@ const AuthorProfile = () => {
       </div>
     );
   }
+
+  const isOwnProfile = user?.id === userId;
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -61,15 +84,34 @@ const AuthorProfile = () => {
           </div>
 
           <div className="flex-1">
-            <h1 className="font-display text-3xl font-bold text-foreground">
-              {author.display_name}
-            </h1>
+            <div className="flex items-center gap-3 flex-wrap">
+              <h1 className="font-display text-3xl font-bold text-foreground">
+                {author.display_name}
+              </h1>
+              {!isOwnProfile && (
+                <button
+                  onClick={handleFollow}
+                  disabled={toggleFollow.isPending}
+                  className={`inline-flex items-center gap-1.5 rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
+                    isFollowing
+                      ? "bg-secondary text-foreground hover:bg-destructive/10 hover:text-destructive"
+                      : "bg-primary text-primary-foreground hover:bg-primary/90"
+                  }`}
+                >
+                  {isFollowing ? (
+                    <><UserMinus className="h-3.5 w-3.5" /> Unfollow</>
+                  ) : (
+                    <><UserPlus className="h-3.5 w-3.5" /> Follow</>
+                  )}
+                </button>
+              )}
+            </div>
             {author.bio && (
               <p className="mt-2 text-muted-foreground leading-relaxed max-w-xl">
                 {author.bio}
               </p>
             )}
-            <div className="mt-4 flex items-center gap-6">
+            <div className="mt-4 flex items-center gap-6 flex-wrap">
               <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
                 <BookOpen className="h-4 w-4 text-accent" />
                 <span className="font-medium text-foreground">{author.poem_count}</span> poems
@@ -78,24 +120,80 @@ const AuthorProfile = () => {
                 <Heart className="h-4 w-4 text-accent" />
                 <span className="font-medium text-foreground">{author.total_likes}</span> likes
               </div>
+              <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                <Users className="h-4 w-4 text-accent" />
+                <span className="font-medium text-foreground">{followerCount}</span> followers
+              </div>
+              <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                <Users className="h-4 w-4 text-muted-foreground/50" />
+                <span className="font-medium text-foreground">{followingCount}</span> following
+              </div>
             </div>
           </div>
         </div>
 
-        {/* Poems grid */}
-        <h2 className="font-display text-xl font-semibold text-foreground mb-4">
-          Published Poems
-        </h2>
-        {poems.length > 0 ? (
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {poems.map((poem) => (
-              <PoemCard key={poem.id} poem={poem} />
-            ))}
-          </div>
+        {/* Tabs */}
+        <div className="flex gap-1 mb-6 border-b border-border">
+          <button
+            onClick={() => setActiveTab("poems")}
+            className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors -mb-px ${
+              activeTab === "poems"
+                ? "border-accent text-foreground"
+                : "border-transparent text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <Feather className="h-4 w-4 inline mr-1.5 -mt-0.5" />
+            Poems
+          </button>
+          <button
+            onClick={() => setActiveTab("catalog")}
+            className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors -mb-px ${
+              activeTab === "catalog"
+                ? "border-accent text-foreground"
+                : "border-transparent text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <Bookmark className="h-4 w-4 inline mr-1.5 -mt-0.5" />
+            Catalog
+          </button>
+        </div>
+
+        {/* Tab content */}
+        {activeTab === "poems" ? (
+          <>
+            {poems.length > 0 ? (
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                {poems.map((poem) => (
+                  <PoemCard key={poem.id} poem={poem} />
+                ))}
+              </div>
+            ) : (
+              <p className="text-center text-muted-foreground py-8">
+                No poems published yet.
+              </p>
+            )}
+          </>
         ) : (
-          <p className="text-center text-muted-foreground py-8">
-            No poems published yet.
-          </p>
+          <>
+            {savedData?.isPublic ? (
+              savedData.poems.length > 0 ? (
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                  {savedData.poems.map((poem: any) => (
+                    <PoemCard key={poem.id} poem={poem} />
+                  ))}
+                </div>
+              ) : (
+                <p className="text-center text-muted-foreground py-8">
+                  No saved poems yet.
+                </p>
+              )
+            ) : (
+              <div className="flex flex-col items-center py-12 text-center">
+                <Lock className="h-10 w-10 text-muted-foreground/30 mb-3" />
+                <p className="text-muted-foreground">This catalog is private.</p>
+              </div>
+            )}
+          </>
         )}
       </main>
       <Footer />
