@@ -27,6 +27,7 @@ const App = () => (
             <Route path="/auth" element={<Auth />} />
             <Route path="/poem/:id" element={<PoemDetail />} />
             <Route path="/author/:userId" element={<AuthorProfilePage />} />
+            <Route path="/feed" element={<Feed />} />
             <Route path="/catalog" element={<Catalog />} />
             <Route path="/portfolio" element={<Portfolio />} />
             <Route path="*" element={<NotFound />} />
