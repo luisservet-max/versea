@@ -98,6 +98,9 @@ const Index = () => {
   const [source, setSource] = useState<SourceFilter>("all");
   const [language, setLanguage] = useState<string | null>(null);
 
+  const { data: availableLanguages = [] } = useAvailableLanguages();
+  const { data: availableTags = [] } = useAvailableTags();
+
   const { data, isLoading, fetchNextPage, hasNextPage, isFetchingNextPage } = usePoems({
     tag: activeTag,
     search: searchQuery || undefined,
