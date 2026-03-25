@@ -2,13 +2,22 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import PoemCard from "@/components/PoemCard";
 import { useSavedPoems } from "@/hooks/useInteractions";
+import { useCatalogPrivacy } from "@/hooks/useFollows";
 import { useAuth } from "@/contexts/AuthContext";
-import { BookOpen, Loader2 } from "lucide-react";
+import { BookOpen, Loader2, Globe, Lock } from "lucide-react";
 import { Link } from "react-router-dom";
+import { toast } from "sonner";
 
 const Catalog = () => {
   const { user } = useAuth();
   const { data: poems = [], isLoading } = useSavedPoems();
+  const { isPublic, togglePrivacy } = useCatalogPrivacy();
+
+  const handleTogglePrivacy = () => {
+    togglePrivacy.mutate(!isPublic, {
+      onSuccess: () => toast.success(isPublic ? "Catalog is now private" : "Catalog is now public"),
+    });
+  };
 
   if (!user) {
     return (
@@ -33,12 +42,31 @@ const Catalog = () => {
     <div className="min-h-screen flex flex-col">
       <Header />
       <main className="container flex-1 py-10">
-        <div className="flex items-center gap-3 mb-8">
-          <BookOpen className="h-6 w-6 text-accent" />
-          <h1 className="font-display text-3xl font-bold text-foreground">My Catalog</h1>
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center gap-3">
+            <BookOpen className="h-6 w-6 text-accent" />
+            <h1 className="font-display text-3xl font-bold text-foreground">My Catalog</h1>
+          </div>
+          <button
+            onClick={handleTogglePrivacy}
+            disabled={togglePrivacy.isPending}
+            className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
+              isPublic
+                ? "bg-accent/10 text-accent hover:bg-accent/20"
+                : "bg-secondary text-muted-foreground hover:text-foreground"
+            }`}
+            title={isPublic ? "Your catalog is visible to followers" : "Your catalog is private"}
+          >
+            {isPublic ? (
+              <><Globe className="h-3.5 w-3.5" /> Public</>
+            ) : (
+              <><Lock className="h-3.5 w-3.5" /> Private</>
+            )}
+          </button>
         </div>
         <p className="text-muted-foreground mb-8 max-w-lg">
           Your personal poetry collection. Save poems you love and build your reading library.
+          {isPublic ? " Others can see your catalog." : " Only you can see your catalog."}
         </p>
 
         {isLoading ? (
