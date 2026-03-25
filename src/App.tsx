@@ -19,25 +19,27 @@ const queryClient = new QueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <AuthProvider>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
-          <Routes>
-            <Route path="/" element={<Index />} />
-            <Route path="/auth" element={<Auth />} />
-            <Route path="/poem/:id" element={<PoemDetail />} />
-            <Route path="/author/:userId" element={<AuthorProfilePage />} />
-            <Route path="/classic-author/:authorName" element={<ClassicAuthorProfile />} />
-            <Route path="/feed" element={<Feed />} />
-            <Route path="/catalog" element={<Catalog />} />
-            <Route path="/portfolio" element={<Portfolio />} />
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </BrowserRouter>
-      </TooltipProvider>
-    </AuthProvider>
+    <LanguageProvider>
+      <AuthProvider>
+        <TooltipProvider>
+          <Toaster />
+          <Sonner />
+          <BrowserRouter>
+            <Routes>
+              <Route path="/" element={<Index />} />
+              <Route path="/auth" element={<Auth />} />
+              <Route path="/poem/:id" element={<PoemDetail />} />
+              <Route path="/author/:userId" element={<AuthorProfilePage />} />
+              <Route path="/classic-author/:authorName" element={<ClassicAuthorProfile />} />
+              <Route path="/feed" element={<Feed />} />
+              <Route path="/catalog" element={<Catalog />} />
+              <Route path="/portfolio" element={<Portfolio />} />
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </BrowserRouter>
+        </TooltipProvider>
+      </AuthProvider>
+    </LanguageProvider>
   </QueryClientProvider>
 );
 
