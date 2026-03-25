@@ -1,5 +1,5 @@
 import { Link, useLocation } from "react-router-dom";
-import { BookOpen, Feather, Search, User, LogOut } from "lucide-react";
+import { BookOpen, Feather, Search, User, LogOut, Activity } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 
 const Header = () => {
@@ -8,6 +8,7 @@ const Header = () => {
 
   const navItems = [
     { to: "/", label: "Discover", icon: Search },
+    { to: "/feed", label: "Feed", icon: Activity },
     { to: "/catalog", label: "My Catalog", icon: BookOpen },
     { to: "/portfolio", label: "My Poems", icon: Feather },
   ];
