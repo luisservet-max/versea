@@ -21,6 +21,17 @@ const AuthorProfile = () => {
   const { data: followingCount = 0 } = useFollowingCount(userId);
   const { data: savedData } = useUserSavedPoems(userId);
   const [activeTab, setActiveTab] = useState<"poems" | "catalog">("poems");
+  const { t } = useLanguage();
+
+  const handleShareProfile = async () => {
+    const url = `${window.location.origin}/author/${userId}`;
+    try {
+      await navigator.clipboard.writeText(url);
+      toast.success(t("find_link_copied"));
+    } catch {
+      toast.error(t("detail_link_error"));
+    }
+  };
 
   const handleFollow = () => {
     if (!user) {
