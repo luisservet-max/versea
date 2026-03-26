@@ -164,7 +164,7 @@ const Index = () => {
       <Header />
 
       {/* Hero */}
-      <section className="relative overflow-hidden bg-parchment-warm py-20 md:py-28">
+      <section className="relative bg-parchment-warm py-20 md:py-28" style={{ zIndex: 20 }}>
         <div className="container relative z-10 flex flex-col items-center text-center">
           <div className="flex items-center gap-2 rounded-full bg-accent/10 px-4 py-1.5 text-sm font-medium text-accent mb-6">
             <Feather className="h-4 w-4" />
