@@ -4,8 +4,10 @@ import PoemCard from "@/components/PoemCard";
 import { usePoems } from "@/hooks/usePoems";
 import { useAvailableLanguages, useAvailableTags } from "@/hooks/useFilterOptions";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { useState, useRef, useEffect } from "react";
-import { Feather, Search, Loader2, Library, Users, Globe, Tag, ChevronDown, X } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { useState, useRef, useEffect, useCallback } from "react";
+import { Feather, Search, Loader2, Library, Users, Globe, Tag, ChevronDown, X, User, BookOpen } from "lucide-react";
+import { Link } from "react-router-dom";
 
 type SourceFilter = "all" | "classic" | "community";
 
