@@ -15,6 +15,7 @@ import AuthorProfilePage from "./pages/AuthorProfile.tsx";
 import ClassicAuthorProfile from "./pages/ClassicAuthorProfile.tsx";
 import Feed from "./pages/Feed.tsx";
 import FindPeople from "./pages/FindPeople.tsx";
+import Profile from "./pages/Profile.tsx";
 
 const queryClient = new QueryClient();
 
@@ -36,6 +37,7 @@ const App = () => (
               <Route path="/find-people" element={<FindPeople />} />
               <Route path="/catalog" element={<Catalog />} />
               <Route path="/portfolio" element={<Portfolio />} />
+              <Route path="/profile" element={<Profile />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </BrowserRouter>

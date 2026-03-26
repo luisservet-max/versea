@@ -90,7 +90,7 @@ const Header = () => {
           {user ? (
             <>
               <Link
-                to="/portfolio"
+                to="/profile"
                 className="flex h-9 w-9 items-center justify-center rounded-full bg-secondary text-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
               >
                 <User className="h-4 w-4" />
