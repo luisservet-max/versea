@@ -100,6 +100,7 @@ const Index = () => {
   const { t } = useLanguage();
   const [activeTag, setActiveTag] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [committedSearch, setCommittedSearch] = useState("");
   const [source, setSource] = useState<SourceFilter>("all");
   const [language, setLanguage] = useState<string | null>(null);
 
@@ -122,13 +123,11 @@ const Index = () => {
     if (q.length < 2) { setSuggestions([]); return; }
     setSugLoading(true);
     const term = `%${q}%`;
-    const [poemsRes, authorsRes, classicRes] = await Promise.all([
-      supabase.from("poems").select("id, title, author_name").ilike("title", term).limit(4),
-      supabase.from("profiles").select("user_id, display_name").ilike("display_name", term).limit(4),
-      supabase.from("classic_authors").select("id, name").ilike("name", term).limit(4),
+    const [authorsRes, classicRes] = await Promise.all([
+      supabase.from("profiles").select("user_id, display_name").ilike("display_name", term).limit(5),
+      supabase.from("classic_authors").select("id, name").ilike("name", term).limit(5),
     ]);
     const items: typeof suggestions = [];
-    (poemsRes.data || []).forEach((p: any) => items.push({ type: "poem", id: p.id, label: p.title, sub: p.author_name }));
     (authorsRes.data || []).forEach((a: any) => items.push({ type: "author", id: a.user_id, label: a.display_name || "Anonymous" }));
     (classicRes.data || []).forEach((c: any) => items.push({ type: "classic_author", id: c.name, label: c.name }));
     setSuggestions(items);
@@ -147,7 +146,7 @@ const Index = () => {
 
   const { data, isLoading, fetchNextPage, hasNextPage, isFetchingNextPage } = usePoems({
     tag: activeTag,
-    search: searchQuery || undefined,
+    search: committedSearch || undefined,
     source,
     language,
   });
@@ -181,6 +180,7 @@ const Index = () => {
                 type="text"
                 value={searchQuery}
                 onChange={(e) => handleSearchInput(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter") { setCommittedSearch(searchQuery); setShowSuggestions(false); } }}
                 onFocus={() => { if (suggestions.length > 0) setShowSuggestions(true); }}
                 placeholder={t("hero_search_placeholder")}
                 className="flex-1 bg-transparent text-sm text-foreground placeholder:text-muted-foreground outline-none"
