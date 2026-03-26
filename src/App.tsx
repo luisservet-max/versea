@@ -37,6 +37,7 @@ const App = () => (
               <Route path="/find-people" element={<FindPeople />} />
               <Route path="/catalog" element={<Catalog />} />
               <Route path="/portfolio" element={<Portfolio />} />
+              <Route path="/profile" element={<Profile />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </BrowserRouter>
