@@ -124,7 +124,6 @@ const AuthorProfile = () => {
                 <Share2 className="h-3.5 w-3.5" />
                 {t("find_share_profile")}
               </button>
-              )}
             </div>
             {author.bio && (
               <p className="mt-2 text-muted-foreground leading-relaxed max-w-xl">
