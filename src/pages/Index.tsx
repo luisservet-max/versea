@@ -174,15 +174,53 @@ const Index = () => {
             {t("hero_subtitle")}
           </p>
 
-          <div className="mt-8 flex w-full max-w-md items-center gap-2 rounded-lg border border-border bg-card px-4 py-2 shadow-sm focus-within:ring-2 focus-within:ring-accent/30">
-            <Search className="h-4 w-4 text-muted-foreground" />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder={t("hero_search_placeholder")}
-              className="flex-1 bg-transparent text-sm text-foreground placeholder:text-muted-foreground outline-none"
-            />
+          <div ref={searchRef} className="relative mt-8 w-full max-w-md">
+            <div className="flex items-center gap-2 rounded-lg border border-border bg-card px-4 py-2 shadow-sm focus-within:ring-2 focus-within:ring-accent/30">
+              <Search className="h-4 w-4 text-muted-foreground" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => handleSearchInput(e.target.value)}
+                onFocus={() => { if (suggestions.length > 0) setShowSuggestions(true); }}
+                placeholder={t("hero_search_placeholder")}
+                className="flex-1 bg-transparent text-sm text-foreground placeholder:text-muted-foreground outline-none"
+              />
+            </div>
+            {showSuggestions && (suggestions.length > 0 || sugLoading) && (
+              <div className="absolute left-0 right-0 top-full z-50 mt-1 rounded-lg border border-border bg-popover shadow-lg max-h-64 overflow-y-auto">
+                {sugLoading && suggestions.length === 0 ? (
+                  <div className="flex items-center justify-center py-3">
+                    <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                  </div>
+                ) : (
+                  suggestions.map((s, i) => {
+                    const href = s.type === "poem"
+                      ? `/poem/${s.id}`
+                      : s.type === "author"
+                        ? `/author/${s.id}`
+                        : `/classic-author/${encodeURIComponent(s.id)}`;
+                    const Icon = s.type === "poem" ? BookOpen : User;
+                    return (
+                      <Link
+                        key={`${s.type}-${s.id}-${i}`}
+                        to={href}
+                        onClick={() => setShowSuggestions(false)}
+                        className="flex items-center gap-3 px-4 py-2.5 text-sm transition-colors hover:bg-secondary"
+                      >
+                        <Icon className="h-4 w-4 shrink-0 text-muted-foreground" />
+                        <div className="min-w-0">
+                          <span className="font-medium text-foreground">{s.label}</span>
+                          {s.sub && <span className="ml-1.5 text-xs text-muted-foreground">{t("by")} {s.sub}</span>}
+                          <span className="ml-1.5 text-[10px] text-accent/70 uppercase">
+                            {s.type === "poem" ? t("filter_style") : s.type === "classic_author" ? t("filter_classic") : t("filter_community")}
+                          </span>
+                        </div>
+                      </Link>
+                    );
+                  })
+                )}
+              </div>
+            )}
           </div>
         </div>
         <div className="absolute -right-20 -top-20 h-80 w-80 rounded-full bg-accent/5 blur-3xl" />
