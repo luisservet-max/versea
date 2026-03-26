@@ -88,6 +88,7 @@ const PoemDetail = () => {
   }
 
   const isAuthorLinked = !poem.is_classic && poem.user_id;
+  const isClassicAuthor = poem.is_classic;
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -111,6 +112,13 @@ const PoemDetail = () => {
               {isAuthorLinked ? (
                 <Link
                   to={`/author/${poem.user_id}`}
+                  className="text-sm font-medium text-foreground hover:text-accent transition-colors"
+                >
+                  {poem.author_name}
+                </Link>
+              ) : isClassicAuthor ? (
+                <Link
+                  to={`/classic-author/${encodeURIComponent(poem.author_name || "Unknown")}`}
                   className="text-sm font-medium text-foreground hover:text-accent transition-colors"
                 >
                   {poem.author_name}
