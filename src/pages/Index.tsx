@@ -180,6 +180,7 @@ const Index = () => {
                 type="text"
                 value={searchQuery}
                 onChange={(e) => handleSearchInput(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter") { setCommittedSearch(searchQuery); setShowSuggestions(false); } }}
                 onFocus={() => { if (suggestions.length > 0) setShowSuggestions(true); }}
                 placeholder={t("hero_search_placeholder")}
                 className="flex-1 bg-transparent text-sm text-foreground placeholder:text-muted-foreground outline-none"
