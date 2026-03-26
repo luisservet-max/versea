@@ -136,6 +136,19 @@ const en = {
   detail_removed_catalog: "Removed from catalog",
   detail_saved_catalog: "Saved to catalog",
 
+  // Find People
+  find_title: "Find People",
+  find_subtitle: "Search for poets and readers to follow.",
+  find_placeholder: "Search by name...",
+  find_search: "Search",
+  find_no_results: "No people found. Try a different name.",
+  find_hint: "Search for poets by their display name.",
+  find_follow: "Follow",
+  find_unfollow: "Unfollow",
+  find_share_profile: "Share Profile",
+  find_link_copied: "Profile link copied!",
+  nav_find_people: "Find People",
+
   // Footer
   footer_tagline: "A place for poetry lovers to discover, catalog, and share the verses that move them.",
 
