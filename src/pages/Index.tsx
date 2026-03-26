@@ -146,7 +146,7 @@ const Index = () => {
 
   const { data, isLoading, fetchNextPage, hasNextPage, isFetchingNextPage } = usePoems({
     tag: activeTag,
-    search: searchQuery || undefined,
+    search: committedSearch || undefined,
     source,
     language,
   });
