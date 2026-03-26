@@ -1,5 +1,5 @@
 import { Link, useLocation } from "react-router-dom";
-import { BookOpen, Feather, Search, User, LogOut, Activity, Globe } from "lucide-react";
+import { BookOpen, Feather, Search, User, LogOut, Activity, Globe, Users } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { localeNames, type Locale } from "@/i18n/translations";
