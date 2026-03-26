@@ -278,6 +278,18 @@ const es: typeof en = {
   detail_removed_catalog: "Eliminado del catálogo",
   detail_saved_catalog: "Guardado en el catálogo",
 
+  find_title: "Buscar Personas",
+  find_subtitle: "Busca poetas y lectores para seguir.",
+  find_placeholder: "Buscar por nombre...",
+  find_search: "Buscar",
+  find_no_results: "No se encontraron personas. Prueba con otro nombre.",
+  find_hint: "Busca poetas por su nombre.",
+  find_follow: "Seguir",
+  find_unfollow: "Dejar de seguir",
+  find_share_profile: "Compartir Perfil",
+  find_link_copied: "¡Enlace del perfil copiado!",
+  nav_find_people: "Buscar Personas",
+
   footer_tagline: "Un lugar para que los amantes de la poesía descubran, cataloguen y compartan los versos que los conmueven.",
 
   not_found_title: "404",
