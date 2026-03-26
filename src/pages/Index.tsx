@@ -103,6 +103,45 @@ const Index = () => {
   const [source, setSource] = useState<SourceFilter>("all");
   const [language, setLanguage] = useState<string | null>(null);
 
+  // Autocomplete state
+  const [suggestions, setSuggestions] = useState<{ type: "poem" | "author" | "classic_author"; id: string; label: string; sub?: string }[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [sugLoading, setSugLoading] = useState(false);
+  const searchRef = useRef<HTMLDivElement>(null);
+  const debounceRef = useRef<ReturnType<typeof setTimeout>>();
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (searchRef.current && !searchRef.current.contains(e.target as Node)) setShowSuggestions(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  const fetchSuggestions = useCallback(async (q: string) => {
+    if (q.length < 2) { setSuggestions([]); return; }
+    setSugLoading(true);
+    const term = `%${q}%`;
+    const [poemsRes, authorsRes, classicRes] = await Promise.all([
+      supabase.from("poems").select("id, title, author_name").ilike("title", term).limit(4),
+      supabase.from("profiles").select("user_id, display_name").ilike("display_name", term).limit(4),
+      supabase.from("classic_authors").select("id, name").ilike("name", term).limit(4),
+    ]);
+    const items: typeof suggestions = [];
+    (poemsRes.data || []).forEach((p: any) => items.push({ type: "poem", id: p.id, label: p.title, sub: p.author_name }));
+    (authorsRes.data || []).forEach((a: any) => items.push({ type: "author", id: a.user_id, label: a.display_name || "Anonymous" }));
+    (classicRes.data || []).forEach((c: any) => items.push({ type: "classic_author", id: c.name, label: c.name }));
+    setSuggestions(items);
+    setSugLoading(false);
+  }, []);
+
+  const handleSearchInput = (val: string) => {
+    setSearchQuery(val);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => fetchSuggestions(val), 250);
+    setShowSuggestions(true);
+  };
+
   const { data: availableLanguages = [] } = useAvailableLanguages();
   const { data: availableTags = [] } = useAvailableTags();
 
