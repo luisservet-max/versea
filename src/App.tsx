@@ -14,6 +14,7 @@ import NotFound from "./pages/NotFound.tsx";
 import AuthorProfilePage from "./pages/AuthorProfile.tsx";
 import ClassicAuthorProfile from "./pages/ClassicAuthorProfile.tsx";
 import Feed from "./pages/Feed.tsx";
+import FindPeople from "./pages/FindPeople.tsx";
 
 const queryClient = new QueryClient();
 
@@ -32,6 +33,7 @@ const App = () => (
               <Route path="/author/:userId" element={<AuthorProfilePage />} />
               <Route path="/classic-author/:authorName" element={<ClassicAuthorProfile />} />
               <Route path="/feed" element={<Feed />} />
+              <Route path="/find-people" element={<FindPeople />} />
               <Route path="/catalog" element={<Catalog />} />
               <Route path="/portfolio" element={<Portfolio />} />
               <Route path="*" element={<NotFound />} />

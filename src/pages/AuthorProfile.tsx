@@ -5,7 +5,8 @@ import { useParams, Link } from "react-router-dom";
 import { useAuthorProfile, useAuthorPoems } from "@/hooks/useAuthor";
 import { useFollowStatus, useToggleFollow, useFollowerCount, useFollowingCount, useUserSavedPoems } from "@/hooks/useFollows";
 import { useAuth } from "@/contexts/AuthContext";
-import { ArrowLeft, Heart, BookOpen, Loader2, User, UserPlus, UserMinus, Users, Bookmark, Lock, Feather } from "lucide-react";
+import { ArrowLeft, Heart, BookOpen, Loader2, User, UserPlus, UserMinus, Users, Bookmark, Lock, Feather, Share2 } from "lucide-react";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -20,6 +21,17 @@ const AuthorProfile = () => {
   const { data: followingCount = 0 } = useFollowingCount(userId);
   const { data: savedData } = useUserSavedPoems(userId);
   const [activeTab, setActiveTab] = useState<"poems" | "catalog">("poems");
+  const { t } = useLanguage();
+
+  const handleShareProfile = async () => {
+    const url = `${window.location.origin}/author/${userId}`;
+    try {
+      await navigator.clipboard.writeText(url);
+      toast.success(t("find_link_copied"));
+    } catch {
+      toast.error(t("detail_link_error"));
+    }
+  };
 
   const handleFollow = () => {
     if (!user) {
@@ -99,12 +111,19 @@ const AuthorProfile = () => {
                   }`}
                 >
                   {isFollowing ? (
-                    <><UserMinus className="h-3.5 w-3.5" /> Unfollow</>
+                    <><UserMinus className="h-3.5 w-3.5" /> {t("find_unfollow")}</>
                   ) : (
-                    <><UserPlus className="h-3.5 w-3.5" /> Follow</>
+                    <><UserPlus className="h-3.5 w-3.5" /> {t("find_follow")}</>
                   )}
                 </button>
               )}
+              <button
+                onClick={handleShareProfile}
+                className="inline-flex items-center gap-1.5 rounded-full bg-secondary px-3 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground hover:bg-secondary/80"
+              >
+                <Share2 className="h-3.5 w-3.5" />
+                {t("find_share_profile")}
+              </button>
             </div>
             {author.bio && (
               <p className="mt-2 text-muted-foreground leading-relaxed max-w-xl">

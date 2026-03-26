@@ -1,5 +1,5 @@
 import { Link, useLocation } from "react-router-dom";
-import { BookOpen, Feather, Search, User, LogOut, Activity, Globe } from "lucide-react";
+import { BookOpen, Feather, Search, User, LogOut, Activity, Globe, Users } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { localeNames, type Locale } from "@/i18n/translations";
@@ -23,6 +23,7 @@ const Header = () => {
   const navItems = [
     { to: "/", label: t("nav_discover"), icon: Search },
     { to: "/feed", label: t("nav_feed"), icon: Activity },
+    { to: "/find-people", label: t("nav_find_people"), icon: Users },
     { to: "/catalog", label: t("nav_catalog"), icon: BookOpen },
     { to: "/portfolio", label: t("nav_poems"), icon: Feather },
   ];

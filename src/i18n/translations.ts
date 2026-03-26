@@ -136,6 +136,19 @@ const en = {
   detail_removed_catalog: "Removed from catalog",
   detail_saved_catalog: "Saved to catalog",
 
+  // Find People
+  find_title: "Find People",
+  find_subtitle: "Search for poets and readers to follow.",
+  find_placeholder: "Search by name...",
+  find_search: "Search",
+  find_no_results: "No people found. Try a different name.",
+  find_hint: "Search for poets by their display name.",
+  find_follow: "Follow",
+  find_unfollow: "Unfollow",
+  find_share_profile: "Share Profile",
+  find_link_copied: "Profile link copied!",
+  nav_find_people: "Find People",
+
   // Footer
   footer_tagline: "A place for poetry lovers to discover, catalog, and share the verses that move them.",
 
@@ -265,6 +278,18 @@ const es: typeof en = {
   detail_removed_catalog: "Eliminado del catálogo",
   detail_saved_catalog: "Guardado en el catálogo",
 
+  find_title: "Buscar Personas",
+  find_subtitle: "Busca poetas y lectores para seguir.",
+  find_placeholder: "Buscar por nombre...",
+  find_search: "Buscar",
+  find_no_results: "No se encontraron personas. Prueba con otro nombre.",
+  find_hint: "Busca poetas por su nombre.",
+  find_follow: "Seguir",
+  find_unfollow: "Dejar de seguir",
+  find_share_profile: "Compartir Perfil",
+  find_link_copied: "¡Enlace del perfil copiado!",
+  nav_find_people: "Buscar Personas",
+
   footer_tagline: "Un lugar para que los amantes de la poesía descubran, cataloguen y compartan los versos que los conmueven.",
 
   not_found_title: "404",
@@ -391,6 +416,18 @@ const fr: typeof en = {
   detail_no_comments: "Pas encore de commentaires. Soyez le premier à partager vos réflexions !",
   detail_removed_catalog: "Retiré du catalogue",
   detail_saved_catalog: "Sauvegardé dans le catalogue",
+
+  find_title: "Trouver des Personnes",
+  find_subtitle: "Cherchez des poètes et lecteurs à suivre.",
+  find_placeholder: "Rechercher par nom...",
+  find_search: "Rechercher",
+  find_no_results: "Aucune personne trouvée. Essayez un autre nom.",
+  find_hint: "Recherchez des poètes par leur nom.",
+  find_follow: "Suivre",
+  find_unfollow: "Ne plus suivre",
+  find_share_profile: "Partager le Profil",
+  find_link_copied: "Lien du profil copié !",
+  nav_find_people: "Trouver des Personnes",
 
   footer_tagline: "Un lieu pour les amoureux de la poésie pour découvrir, cataloguer et partager les vers qui les émeuvent.",
 
