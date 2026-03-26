@@ -417,6 +417,18 @@ const fr: typeof en = {
   detail_removed_catalog: "Retiré du catalogue",
   detail_saved_catalog: "Sauvegardé dans le catalogue",
 
+  find_title: "Trouver des Personnes",
+  find_subtitle: "Cherchez des poètes et lecteurs à suivre.",
+  find_placeholder: "Rechercher par nom...",
+  find_search: "Rechercher",
+  find_no_results: "Aucune personne trouvée. Essayez un autre nom.",
+  find_hint: "Recherchez des poètes par leur nom.",
+  find_follow: "Suivre",
+  find_unfollow: "Ne plus suivre",
+  find_share_profile: "Partager le Profil",
+  find_link_copied: "Lien du profil copié !",
+  nav_find_people: "Trouver des Personnes",
+
   footer_tagline: "Un lieu pour les amoureux de la poésie pour découvrir, cataloguer et partager les vers qui les émeuvent.",
 
   not_found_title: "404",

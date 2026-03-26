@@ -23,6 +23,7 @@ const Header = () => {
   const navItems = [
     { to: "/", label: t("nav_discover"), icon: Search },
     { to: "/feed", label: t("nav_feed"), icon: Activity },
+    { to: "/find-people", label: t("nav_find_people"), icon: Users },
     { to: "/catalog", label: t("nav_catalog"), icon: BookOpen },
     { to: "/portfolio", label: t("nav_poems"), icon: Feather },
   ];
