@@ -152,6 +152,29 @@ const en = {
   // Footer
   footer_tagline: "A place for poetry lovers to discover, catalog, and share the verses that move them.",
 
+  // Profile
+  profile_sign_in_prompt: "Sign in to view your profile.",
+  profile_updated: "Profile updated!",
+  profile_poems: "Poems",
+  profile_likes: "Likes",
+  profile_followers: "Followers",
+  profile_following: "Following",
+  profile_public_view: "Public Profile",
+  profile_edit_title: "Profile Settings",
+  profile_edit: "Edit",
+  profile_display_name: "Display Name",
+  profile_bio: "Bio",
+  profile_avatar_url: "Avatar URL",
+  profile_save: "Save",
+  profile_security: "Security",
+  profile_new_password: "New Password",
+  profile_confirm_password: "Confirm Password",
+  profile_change_password: "Change Password",
+  profile_password_min: "Password must be at least 6 characters",
+  profile_password_mismatch: "Passwords do not match",
+  profile_password_changed: "Password changed successfully!",
+  nav_profile: "Profile",
+
   // 404
   not_found_title: "404",
   not_found_message: "Oops! Page not found",
