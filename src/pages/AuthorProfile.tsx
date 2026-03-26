@@ -114,8 +114,15 @@ const AuthorProfile = () => {
                     <><UserMinus className="h-3.5 w-3.5" /> Unfollow</>
                   ) : (
                     <><UserPlus className="h-3.5 w-3.5" /> Follow</>
-                  )}
-                </button>
+                )}
+              </button>
+              <button
+                onClick={handleShareProfile}
+                className="inline-flex items-center gap-1.5 rounded-full bg-secondary px-3 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground hover:bg-secondary/80"
+              >
+                <Share2 className="h-3.5 w-3.5" />
+                {t("find_share_profile")}
+              </button>
               )}
             </div>
             {author.bio && (
