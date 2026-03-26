@@ -119,17 +119,23 @@ const Index = () => {
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
+  const normalize = (s: string) =>
+    s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+
   const fetchSuggestions = useCallback(async (q: string) => {
     if (q.length < 2) { setSuggestions([]); return; }
     setSugLoading(true);
     const term = `%${q}%`;
     const [authorsRes, classicRes] = await Promise.all([
-      supabase.from("profiles").select("user_id, display_name").ilike("display_name", term).limit(5),
-      supabase.from("classic_authors").select("id, name").ilike("name", term).limit(5),
+      supabase.from("profiles").select("user_id, display_name").ilike("display_name", term).limit(10),
+      supabase.from("classic_authors").select("id, name").ilike("name", term).limit(10),
     ]);
+    const nq = normalize(q);
     const items: typeof suggestions = [];
-    (authorsRes.data || []).forEach((a: any) => items.push({ type: "author", id: a.user_id, label: a.display_name || "Anonymous" }));
-    (classicRes.data || []).forEach((c: any) => items.push({ type: "classic_author", id: c.name, label: c.name }));
+    (authorsRes.data || []).filter((a: any) => normalize(a.display_name || "").includes(nq)).slice(0, 5)
+      .forEach((a: any) => items.push({ type: "author", id: a.user_id, label: a.display_name || "Anonymous" }));
+    (classicRes.data || []).filter((c: any) => normalize(c.name).includes(nq)).slice(0, 5)
+      .forEach((c: any) => items.push({ type: "classic_author", id: c.name, label: c.name }));
     setSuggestions(items);
     setSugLoading(false);
   }, []);
@@ -173,7 +179,7 @@ const Index = () => {
             {t("hero_subtitle")}
           </p>
 
-          <div ref={searchRef} className="relative mt-8 w-full max-w-md">
+          <div ref={searchRef} className="relative z-50 mt-8 w-full max-w-md">
             <div className="flex items-center gap-2 rounded-lg border border-border bg-card px-4 py-2 shadow-sm focus-within:ring-2 focus-within:ring-accent/30">
               <Search className="h-4 w-4 text-muted-foreground" />
               <input
