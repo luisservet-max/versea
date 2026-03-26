@@ -100,6 +100,7 @@ const Index = () => {
   const { t } = useLanguage();
   const [activeTag, setActiveTag] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [committedSearch, setCommittedSearch] = useState("");
   const [source, setSource] = useState<SourceFilter>("all");
   const [language, setLanguage] = useState<string | null>(null);
 
