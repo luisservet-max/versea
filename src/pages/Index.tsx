@@ -4,8 +4,10 @@ import PoemCard from "@/components/PoemCard";
 import { usePoems } from "@/hooks/usePoems";
 import { useAvailableLanguages, useAvailableTags } from "@/hooks/useFilterOptions";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { useState, useRef, useEffect } from "react";
-import { Feather, Search, Loader2, Library, Users, Globe, Tag, ChevronDown, X } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { useState, useRef, useEffect, useCallback } from "react";
+import { Feather, Search, Loader2, Library, Users, Globe, Tag, ChevronDown, X, User, BookOpen } from "lucide-react";
+import { Link } from "react-router-dom";
 
 type SourceFilter = "all" | "classic" | "community";
 
@@ -101,6 +103,45 @@ const Index = () => {
   const [source, setSource] = useState<SourceFilter>("all");
   const [language, setLanguage] = useState<string | null>(null);
 
+  // Autocomplete state
+  const [suggestions, setSuggestions] = useState<{ type: "poem" | "author" | "classic_author"; id: string; label: string; sub?: string }[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [sugLoading, setSugLoading] = useState(false);
+  const searchRef = useRef<HTMLDivElement>(null);
+  const debounceRef = useRef<ReturnType<typeof setTimeout>>();
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (searchRef.current && !searchRef.current.contains(e.target as Node)) setShowSuggestions(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  const fetchSuggestions = useCallback(async (q: string) => {
+    if (q.length < 2) { setSuggestions([]); return; }
+    setSugLoading(true);
+    const term = `%${q}%`;
+    const [poemsRes, authorsRes, classicRes] = await Promise.all([
+      supabase.from("poems").select("id, title, author_name").ilike("title", term).limit(4),
+      supabase.from("profiles").select("user_id, display_name").ilike("display_name", term).limit(4),
+      supabase.from("classic_authors").select("id, name").ilike("name", term).limit(4),
+    ]);
+    const items: typeof suggestions = [];
+    (poemsRes.data || []).forEach((p: any) => items.push({ type: "poem", id: p.id, label: p.title, sub: p.author_name }));
+    (authorsRes.data || []).forEach((a: any) => items.push({ type: "author", id: a.user_id, label: a.display_name || "Anonymous" }));
+    (classicRes.data || []).forEach((c: any) => items.push({ type: "classic_author", id: c.name, label: c.name }));
+    setSuggestions(items);
+    setSugLoading(false);
+  }, []);
+
+  const handleSearchInput = (val: string) => {
+    setSearchQuery(val);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => fetchSuggestions(val), 250);
+    setShowSuggestions(true);
+  };
+
   const { data: availableLanguages = [] } = useAvailableLanguages();
   const { data: availableTags = [] } = useAvailableTags();
 
@@ -133,15 +174,53 @@ const Index = () => {
             {t("hero_subtitle")}
           </p>
 
-          <div className="mt-8 flex w-full max-w-md items-center gap-2 rounded-lg border border-border bg-card px-4 py-2 shadow-sm focus-within:ring-2 focus-within:ring-accent/30">
-            <Search className="h-4 w-4 text-muted-foreground" />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder={t("hero_search_placeholder")}
-              className="flex-1 bg-transparent text-sm text-foreground placeholder:text-muted-foreground outline-none"
-            />
+          <div ref={searchRef} className="relative mt-8 w-full max-w-md">
+            <div className="flex items-center gap-2 rounded-lg border border-border bg-card px-4 py-2 shadow-sm focus-within:ring-2 focus-within:ring-accent/30">
+              <Search className="h-4 w-4 text-muted-foreground" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => handleSearchInput(e.target.value)}
+                onFocus={() => { if (suggestions.length > 0) setShowSuggestions(true); }}
+                placeholder={t("hero_search_placeholder")}
+                className="flex-1 bg-transparent text-sm text-foreground placeholder:text-muted-foreground outline-none"
+              />
+            </div>
+            {showSuggestions && (suggestions.length > 0 || sugLoading) && (
+              <div className="absolute left-0 right-0 top-full z-50 mt-1 rounded-lg border border-border bg-popover shadow-lg max-h-64 overflow-y-auto">
+                {sugLoading && suggestions.length === 0 ? (
+                  <div className="flex items-center justify-center py-3">
+                    <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                  </div>
+                ) : (
+                  suggestions.map((s, i) => {
+                    const href = s.type === "poem"
+                      ? `/poem/${s.id}`
+                      : s.type === "author"
+                        ? `/author/${s.id}`
+                        : `/classic-author/${encodeURIComponent(s.id)}`;
+                    const Icon = s.type === "poem" ? BookOpen : User;
+                    return (
+                      <Link
+                        key={`${s.type}-${s.id}-${i}`}
+                        to={href}
+                        onClick={() => setShowSuggestions(false)}
+                        className="flex items-center gap-3 px-4 py-2.5 text-sm transition-colors hover:bg-secondary"
+                      >
+                        <Icon className="h-4 w-4 shrink-0 text-muted-foreground" />
+                        <div className="min-w-0">
+                          <span className="font-medium text-foreground">{s.label}</span>
+                          {s.sub && <span className="ml-1.5 text-xs text-muted-foreground">{t("by")} {s.sub}</span>}
+                          <span className="ml-1.5 text-[10px] text-accent/70 uppercase">
+                            {s.type === "poem" ? t("filter_style") : s.type === "classic_author" ? t("filter_classic") : t("filter_community")}
+                          </span>
+                        </div>
+                      </Link>
+                    );
+                  })
+                )}
+              </div>
+            )}
           </div>
         </div>
         <div className="absolute -right-20 -top-20 h-80 w-80 rounded-full bg-accent/5 blur-3xl" />
