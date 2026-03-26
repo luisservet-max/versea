@@ -14,6 +14,7 @@ import NotFound from "./pages/NotFound.tsx";
 import AuthorProfilePage from "./pages/AuthorProfile.tsx";
 import ClassicAuthorProfile from "./pages/ClassicAuthorProfile.tsx";
 import Feed from "./pages/Feed.tsx";
+import FindPeople from "./pages/FindPeople.tsx";
 
 const queryClient = new QueryClient();
 
