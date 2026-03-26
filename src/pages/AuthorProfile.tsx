@@ -5,7 +5,8 @@ import { useParams, Link } from "react-router-dom";
 import { useAuthorProfile, useAuthorPoems } from "@/hooks/useAuthor";
 import { useFollowStatus, useToggleFollow, useFollowerCount, useFollowingCount, useUserSavedPoems } from "@/hooks/useFollows";
 import { useAuth } from "@/contexts/AuthContext";
-import { ArrowLeft, Heart, BookOpen, Loader2, User, UserPlus, UserMinus, Users, Bookmark, Lock, Feather } from "lucide-react";
+import { ArrowLeft, Heart, BookOpen, Loader2, User, UserPlus, UserMinus, Users, Bookmark, Lock, Feather, Share2 } from "lucide-react";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { useState } from "react";
 import { toast } from "sonner";
 
