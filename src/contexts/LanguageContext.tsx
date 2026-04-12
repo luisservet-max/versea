@@ -32,7 +32,11 @@ export const LanguageProvider = ({ children }: { children: ReactNode }) => {
     document.documentElement.lang = locale;
   }, []);
 
-  const t = (key: TranslationKey) => translations[locale][key] || translations.en[key] || key;
+  const t = (key: TranslationKey) => {
+    const val = translations[locale][key];
+    if (val !== undefined && val !== null) return val;
+    return translations.en[key] ?? key;
+  };
 
   return (
     <LanguageContext.Provider value={{ locale, setLocale, t }}>
