@@ -16,6 +16,7 @@ import ClassicAuthorProfile from "./pages/ClassicAuthorProfile.tsx";
 import Feed from "./pages/Feed.tsx";
 import FindPeople from "./pages/FindPeople.tsx";
 import Profile from "./pages/Profile.tsx";
+import ResetPassword from "./pages/ResetPassword.tsx";
 
 const queryClient = new QueryClient();
 
@@ -38,6 +39,7 @@ const App = () => (
               <Route path="/catalog" element={<Catalog />} />
               <Route path="/portfolio" element={<Portfolio />} />
               <Route path="/profile" element={<Profile />} />
+              <Route path="/reset-password" element={<ResetPassword />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </BrowserRouter>
