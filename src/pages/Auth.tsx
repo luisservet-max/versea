@@ -30,6 +30,20 @@ const Auth = () => {
 
     try {
       if (isSignUp) {
+        const res = await fetch(
+          "https://smdnmnmtkqibirjwvomf.supabase.co/functions/v1/check-email-exists",
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ email }),
+          }
+        );
+        const { exists } = await res.json();
+        if (exists) {
+          setError("It looks like you already have an account. Try signing in instead.");
+          return;
+        }
+
         const { error } = await supabase.auth.signUp({
           email,
           password,
@@ -58,7 +72,7 @@ const Auth = () => {
       provider: "google",
       options: {
         redirectTo: window.location.origin,
-      }, 
+      },
     });
     if (error) setError(error.message);
   };
