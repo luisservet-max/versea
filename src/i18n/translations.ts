@@ -6,6 +6,61 @@ export const localeNames: Record<Locale, string> = {
   fr: "Français",
 };
 
+// Tag translations — maps English tag names to localised versions
+export const tagTranslations: Record<string, Record<Locale, string>> = {
+  Love:          { en: "Love",          es: "Amor",          fr: "Amour" },
+  Death:         { en: "Death",         es: "Muerte",        fr: "Mort" },
+  Nature:        { en: "Nature",        es: "Naturaleza",    fr: "Nature" },
+  Memory:        { en: "Memory",        es: "Memoria",       fr: "Mémoire" },
+  Loss:          { en: "Loss",          es: "Pérdida",       fr: "Perte" },
+  Beauty:        { en: "Beauty",        es: "Belleza",       fr: "Beauté" },
+  Philosophy:    { en: "Philosophy",    es: "Filosofía",     fr: "Philosophie" },
+  History:       { en: "History",       es: "Historia",      fr: "Histoire" },
+  Power:         { en: "Power",         es: "Poder",         fr: "Pouvoir" },
+  Innocence:     { en: "Innocence",     es: "Inocencia",     fr: "Innocence" },
+  Eternity:      { en: "Eternity",      es: "Eternidad",     fr: "Éternité" },
+  Existentialism:{ en: "Existentialism",es: "Existencialismo",fr: "Existentialisme" },
+  Melancholy:    { en: "Melancholy",    es: "Melancolía",    fr: "Mélancolie" },
+  Gothic:        { en: "Gothic",        es: "Gótico",        fr: "Gothique" },
+  Mystery:       { en: "Mystery",       es: "Misterio",      fr: "Mystère" },
+  Identity:      { en: "Identity",      es: "Identidad",     fr: "Identité" },
+  Life:          { en: "Life",          es: "Vida",          fr: "Vie" },
+  Satire:        { en: "Satire",        es: "Sátira",        fr: "Satire" },
+  Friendship:    { en: "Friendship",    es: "Amistad",       fr: "Amitié" },
+  Freedom:       { en: "Freedom",       es: "Libertad",      fr: "Liberté" },
+  Youth:         { en: "Youth",         es: "Juventud",      fr: "Jeunesse" },
+  Solitude:      { en: "Solitude",      es: "Soledad",       fr: "Solitude" },
+  Symbolism:     { en: "Symbolism",     es: "Simbolismo",    fr: "Symbolisme" },
+  metapoetry:    { en: "Metapoetry",    es: "Metapoesía",    fr: "Métapoésie" },
+  Paradox:       { en: "Paradox",       es: "Paradoja",      fr: "Paradoxe" },
+};
+
+// Style translations
+export const styleTranslations: Record<string, Record<Locale, string>> = {
+  Sonnet:          { en: "Sonnet",          es: "Soneto",          fr: "Sonnet" },
+  Ode:             { en: "Ode",             es: "Oda",             fr: "Ode" },
+  Elegy:           { en: "Elegy",           es: "Elegía",          fr: "Élégie" },
+  Ballad:          { en: "Ballad",          es: "Balada",          fr: "Ballade" },
+  Lyric:           { en: "Lyric",           es: "Lírica",          fr: "Lyrique" },
+  "Free Verse":    { en: "Free Verse",      es: "Verso libre",     fr: "Vers libre" },
+  "Modernist Verse":{ en: "Modernist Verse",es: "Verso modernista",fr: "Vers moderniste" },
+  "Mystical Verse":{ en: "Mystical Verse",  es: "Verso místico",   fr: "Vers mystique" },
+  "Romantic Verse":{ en: "Romantic Verse",  es: "Verso romántico", fr: "Vers romantique" },
+  "Satirical Verse":{ en: "Satirical Verse",es: "Verso satírico",  fr: "Vers satirique" },
+  "Baroque Verse": { en: "Baroque Verse",   es: "Verso barroco",   fr: "Vers baroque" },
+  Epic:            { en: "Epic",            es: "Épica",           fr: "Épopée" },
+};
+
+// Language name translations
+export const languageTranslations: Record<string, Record<Locale, string>> = {
+  English:    { en: "English",    es: "Inglés",    fr: "Anglais" },
+  Spanish:    { en: "Spanish",    es: "Español",   fr: "Espagnol" },
+  French:     { en: "French",     es: "Francés",   fr: "Français" },
+  Italian:    { en: "Italian",    es: "Italiano",  fr: "Italien" },
+  Portuguese: { en: "Portuguese", es: "Portugués", fr: "Portugais" },
+  German:     { en: "German",     es: "Alemán",    fr: "Allemand" },
+};
+
 const en = {
   // Nav
   nav_discover: "Discover",
