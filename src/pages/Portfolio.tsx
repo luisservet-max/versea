@@ -4,30 +4,23 @@ import { useMyPoems, usePublishPoem, useUpdatePoem, useDeletePoem } from "@/hook
 import type { PoemWithAuthor } from "@/hooks/usePoems";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { styleTranslations, languageTranslations, type Locale } from "@/i18n/translations";
 import { Feather, Plus, Loader2, Sparkles, Pencil, Trash2, Share2, Check } from "lucide-react";
-import { useState, useEffect, useRef } from "react";
+import { useState, useRef } from "react";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 
-const LANGUAGES = [
-  "English", "Spanish", "French", "German",
+const LANGUAGE_KEYS = [
+  "English", "Spanish", "Catalan", "French", "German",
   "Italian", "Portuguese", "Russian", "Chinese",
-  "Japanese", "Arabic", "Hindi", "Korean", "Catalan",
+  "Japanese", "Arabic", "Hindi", "Korean",
 ];
 
-const STYLES = [
-  "Ballad",
-  "Elegy",
-  "Epic",
-  "Free Verse",
-  "Lyric",
-  "Modernist Verse",
-  "Mystical Verse",
-  "Ode",
-  "Romantic Verse",
-  "Satirical Verse",
-  "Sonnet",
+const STYLE_KEYS = [
+  "Ballad", "Elegy", "Epic", "Free Verse", "Lyric",
+  "Modernist Verse", "Mystical Verse", "Ode",
+  "Romantic Verse", "Satirical Verse", "Sonnet",
 ];
 
 const EMPTY_FORM = { title: "", content: "", tagsInput: "", language: "English", style: "" };
@@ -41,9 +34,10 @@ interface PoemFormProps {
   submitLabel: string;
   pendingLabel: string;
   t: (key: string) => string;
+  locale: Locale;
 }
 
-const PoemForm = ({ initial = EMPTY_FORM, onCancel, onSubmit, isPending, submitLabel, pendingLabel, t }: PoemFormProps) => {
+const PoemForm = ({ initial = EMPTY_FORM, onCancel, onSubmit, isPending, submitLabel, pendingLabel, t, locale }: PoemFormProps) => {
   const [title, setTitle] = useState(initial.title);
   const [content, setContent] = useState(initial.content);
   const [tagsInput, setTagsInput] = useState(initial.tagsInput);
@@ -63,20 +57,17 @@ const PoemForm = ({ initial = EMPTY_FORM, onCancel, onSubmit, isPending, submitL
       if (data?.tags?.length) setTagsInput(data.tags.join(", "));
       if (data?.language) setLanguage(data.language);
       if (data?.style) setStyle(data.style);
-    } catch (err: any) {
-      // Silent fail on auto-detect — user can still trigger manually
+    } catch {
+      // Silent fail — user can trigger manually
     } finally {
       setAnalyzing(false);
     }
   };
 
-  // Auto-detect after user stops typing for 1.5 seconds
   const handleContentChange = (val: string) => {
     setContent(val);
     if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => {
-      runAnalysis(title, val);
-    }, 1500);
+    debounceRef.current = setTimeout(() => runAnalysis(title, val), 1500);
   };
 
   const handleManualAnalyze = async () => {
@@ -129,7 +120,7 @@ const PoemForm = ({ initial = EMPTY_FORM, onCancel, onSubmit, isPending, submitL
             )}
           </button>
           {analyzing && (
-            <span className="text-xs text-muted-foreground">Detecting language & tags...</span>
+            <span className="text-xs text-muted-foreground">{t("portfolio_detecting")}</span>
           )}
         </div>
       </div>
@@ -142,21 +133,25 @@ const PoemForm = ({ initial = EMPTY_FORM, onCancel, onSubmit, isPending, submitL
             onChange={(e) => setLanguage(e.target.value)}
             className="mt-1 w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:ring-2 focus:ring-accent/30"
           >
-            {LANGUAGES.map((lang) => (
-              <option key={lang} value={lang}>{lang}</option>
+            {LANGUAGE_KEYS.map((lang) => (
+              <option key={lang} value={lang}>
+                {languageTranslations[lang]?.[locale] ?? lang}
+              </option>
             ))}
           </select>
         </div>
         <div>
-          <label className="text-sm font-medium text-foreground">Style</label>
+          <label className="text-sm font-medium text-foreground">{t("portfolio_style_label")}</label>
           <select
             value={style}
             onChange={(e) => setStyle(e.target.value)}
             className="mt-1 w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:ring-2 focus:ring-accent/30"
           >
-            <option value="">Select a style...</option>
-            {STYLES.map((s) => (
-              <option key={s} value={s}>{s}</option>
+            <option value="">{t("portfolio_style_placeholder")}</option>
+            {STYLE_KEYS.map((s) => (
+              <option key={s} value={s}>
+                {styleTranslations[s]?.[locale] ?? s}
+              </option>
             ))}
           </select>
         </div>
@@ -172,7 +167,7 @@ const PoemForm = ({ initial = EMPTY_FORM, onCancel, onSubmit, isPending, submitL
           maxLength={200}
           className="mt-1 w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground outline-none focus:ring-2 focus:ring-accent/30"
         />
-        <p className="mt-1 text-xs text-muted-foreground">Auto-detected from your poem. Feel free to edit.</p>
+        <p className="mt-1 text-xs text-muted-foreground">{t("portfolio_tags_hint")}</p>
       </div>
 
       <div className="flex justify-end gap-2 pt-2">
@@ -198,9 +193,10 @@ const PoemForm = ({ initial = EMPTY_FORM, onCancel, onSubmit, isPending, submitL
 interface MyPoemCardProps {
   poem: PoemWithAuthor;
   t: (key: string) => string;
+  locale: Locale;
 }
 
-const MyPoemCard = ({ poem, t }: MyPoemCardProps) => {
+const MyPoemCard = ({ poem, t, locale }: MyPoemCardProps) => {
   const updatePoem = useUpdatePoem();
   const deletePoem = useDeletePoem();
   const [editing, setEditing] = useState(false);
@@ -211,10 +207,10 @@ const MyPoemCard = ({ poem, t }: MyPoemCardProps) => {
     try {
       await navigator.clipboard.writeText(url);
       setCopied(true);
-      toast.success("Link copied to clipboard");
+      toast.success(t("detail_link_copied"));
       setTimeout(() => setCopied(false), 2000);
     } catch {
-      toast.error("Could not copy link");
+      toast.error(t("detail_link_error"));
     }
   };
 
@@ -230,7 +226,7 @@ const MyPoemCard = ({ poem, t }: MyPoemCardProps) => {
     await updatePoem.mutateAsync(
       { id: poem.id, ...values },
       {
-        onSuccess: () => { toast.success("Poem updated"); setEditing(false); },
+        onSuccess: () => { toast.success(t("profile_updated")); setEditing(false); },
         onError: (err: any) => toast.error(err.message),
       }
     );
@@ -241,7 +237,7 @@ const MyPoemCard = ({ poem, t }: MyPoemCardProps) => {
       {editing ? (
         <div className="p-5">
           <h3 className="font-display text-base font-semibold text-foreground mb-4">
-            Editing — <span className="text-accent">{poem.title}</span>
+            {t("profile_edit")} — <span className="text-accent">{poem.title}</span>
           </h3>
           <PoemForm
             initial={{
@@ -254,9 +250,10 @@ const MyPoemCard = ({ poem, t }: MyPoemCardProps) => {
             onCancel={() => setEditing(false)}
             onSubmit={handleUpdate}
             isPending={updatePoem.isPending}
-            submitLabel="Save changes"
-            pendingLabel="Saving…"
+            submitLabel={t("profile_save")}
+            pendingLabel={t("portfolio_publishing")}
             t={t}
+            locale={locale}
           />
         </div>
       ) : (
@@ -269,10 +266,14 @@ const MyPoemCard = ({ poem, t }: MyPoemCardProps) => {
 
           <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
             {poem.language && (
-              <span className="rounded-full bg-secondary px-2 py-0.5">{poem.language}</span>
+              <span className="rounded-full bg-secondary px-2 py-0.5">
+                {languageTranslations[poem.language]?.[locale] ?? poem.language}
+              </span>
             )}
             {poem.style && (
-              <span className="rounded-full bg-accent/10 px-2 py-0.5 text-accent">{poem.style}</span>
+              <span className="rounded-full bg-accent/10 px-2 py-0.5 text-accent">
+                {styleTranslations[poem.style]?.[locale] ?? poem.style}
+              </span>
             )}
           </div>
 
@@ -298,14 +299,14 @@ const MyPoemCard = ({ poem, t }: MyPoemCardProps) => {
               className="flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
             >
               {copied ? <Check className="h-3.5 w-3.5 text-accent" /> : <Share2 className="h-3.5 w-3.5" />}
-              {copied ? "Copied!" : "Share"}
+              {copied ? "✓" : t("detail_share")}
             </button>
             <button
               onClick={() => setEditing(true)}
               className="flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
             >
               <Pencil className="h-3.5 w-3.5" />
-              Edit
+              {t("profile_edit")}
             </button>
             <button
               onClick={handleDelete}
@@ -313,7 +314,7 @@ const MyPoemCard = ({ poem, t }: MyPoemCardProps) => {
               className="flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium text-destructive/70 transition-colors hover:bg-destructive/10 hover:text-destructive disabled:opacity-50"
             >
               <Trash2 className="h-3.5 w-3.5" />
-              Delete
+              {t("detail_delete")}
             </button>
           </div>
         </div>
@@ -325,7 +326,7 @@ const MyPoemCard = ({ poem, t }: MyPoemCardProps) => {
 // ─── Portfolio Page ────────────────────────────────────────────────────────────
 const Portfolio = () => {
   const { user } = useAuth();
-  const { t } = useLanguage();
+  const { t, locale } = useLanguage();
   const { data: userPoems = [], isLoading } = useMyPoems();
   const publishPoem = usePublishPoem();
   const [showForm, setShowForm] = useState(false);
@@ -382,6 +383,7 @@ const Portfolio = () => {
               submitLabel={t("portfolio_publish")}
               pendingLabel={t("portfolio_publishing")}
               t={t}
+              locale={locale as Locale}
             />
           </div>
         )}
@@ -393,12 +395,12 @@ const Portfolio = () => {
         ) : userPoems.length > 0 ? (
           <>
             <p className="text-xs text-muted-foreground mb-4">
-              {userPoems.length} {userPoems.length === 1 ? "poem" : "poems"} published
+              {userPoems.length} {userPoems.length === 1 ? t("profile_poems").toLowerCase().slice(0, -1) : t("profile_poems").toLowerCase()}
             </p>
             <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
               {userPoems.map((poem, i) => (
                 <div key={poem.id} className="animate-fade-in" style={{ animationDelay: `${i * 80}ms` }}>
-                  <MyPoemCard poem={poem} t={t} />
+                  <MyPoemCard poem={poem} t={t} locale={locale as Locale} />
                 </div>
               ))}
             </div>
