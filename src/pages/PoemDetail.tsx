@@ -157,8 +157,8 @@ const PoemDetail = () => {
           </div>
 
           {/* Poem content */}
-          <div className="mt-8 rounded-xl border border-border bg-parchment-warm p-8 md:p-10 shadow-sm">
-            <pre className="whitespace-pre-wrap font-display text-sm md:text-base leading-[1.9] text-foreground tracking-wide max-w-prose overflow-x-hidden">
+          <div className="mt-8 rounded-xl border border-border bg-parchment-warm p-8 md:p-10 shadow-sm overflow-x-auto">
+            <pre className="whitespace-pre font-display text-sm leading-[1.9] text-foreground tracking-wide">
               {poem.content}
             </pre>
           </div>
