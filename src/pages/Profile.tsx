@@ -8,8 +8,8 @@ import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import {
-  User, Camera, Save, Loader2, Feather, BookOpen, Heart,
-  Users, Lock, Eye, EyeOff, Shield, Settings, Pencil
+  User, Save, Loader2, Feather, BookOpen, Heart,
+  Users, Eye, EyeOff, Shield, Settings, Pencil, Lock, UserPlus
 } from "lucide-react";
 
 const Profile = () => {
@@ -43,7 +43,6 @@ const Profile = () => {
         supabase.from("follows").select("id", { count: "exact", head: true }).eq("following_id", user!.id),
         supabase.from("follows").select("id", { count: "exact", head: true }).eq("follower_id", user!.id),
       ]);
-      // Total likes on user's poems
       const { data: userPoems } = await supabase.from("poems").select("id").eq("user_id", user!.id);
       let totalLikes = 0;
       if (userPoems && userPoems.length > 0) {
@@ -60,6 +59,59 @@ const Profile = () => {
         likes: totalLikes,
       };
     },
+  });
+
+  // Followers list
+  const { data: followers = [] } = useQuery({
+    queryKey: ["my-followers", user?.id],
+    enabled: !!user,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("follows")
+        .select("follower_id, profiles!follows_follower_id_fkey(user_id, display_name, avatar_url)")
+        .eq("following_id", user!.id)
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return (data || []).map((row: any) => ({
+        user_id: row.follower_id,
+        display_name: row.profiles?.display_name || "Poet",
+        avatar_url: row.profiles?.avatar_url || null,
+      }));
+    },
+  });
+
+  // Who I follow (to show follow-back state)
+  const { data: myFollowing = [] } = useQuery({
+    queryKey: ["my-following-ids", user?.id],
+    enabled: !!user,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("follows")
+        .select("following_id")
+        .eq("follower_id", user!.id);
+      return (data || []).map((r: any) => r.following_id);
+    },
+  });
+
+  // Follow / unfollow a follower back
+  const toggleFollow = useMutation({
+    mutationFn: async ({ targetId, isFollowing }: { targetId: string; isFollowing: boolean }) => {
+      if (isFollowing) {
+        await supabase.from("follows").delete()
+          .eq("follower_id", user!.id)
+          .eq("following_id", targetId);
+      } else {
+        await supabase.from("follows").insert({
+          follower_id: user!.id,
+          following_id: targetId,
+        });
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["my-following-ids"] });
+      queryClient.invalidateQueries({ queryKey: ["my-stats"] });
+    },
+    onError: (err: any) => toast.error(err.message),
   });
 
   // Edit state
@@ -103,22 +155,14 @@ const Profile = () => {
   });
 
   const changePassword = async () => {
-    if (newPassword.length < 6) {
-      toast.error(t("profile_password_min"));
-      return;
-    }
-    if (newPassword !== confirmPassword) {
-      toast.error(t("profile_password_mismatch"));
-      return;
-    }
+    if (newPassword.length < 6) { toast.error(t("profile_password_min")); return; }
+    if (newPassword !== confirmPassword) { toast.error(t("profile_password_mismatch")); return; }
     const { error } = await supabase.auth.updateUser({ password: newPassword });
     if (error) {
       toast.error(error.message);
     } else {
       toast.success(t("profile_password_changed"));
-      setNewPassword("");
-      setConfirmPassword("");
-      setShowPasswordSection(false);
+      setNewPassword(""); setConfirmPassword(""); setShowPasswordSection(false);
     }
   };
 
@@ -129,10 +173,7 @@ const Profile = () => {
         <main className="container flex-1 flex flex-col items-center justify-center py-20 text-center">
           <User className="h-12 w-12 text-muted-foreground/30 mb-4" />
           <p className="text-muted-foreground mb-4">{t("profile_sign_in_prompt")}</p>
-          <Link
-            to="/auth"
-            className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
-          >
+          <Link to="/auth" className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90">
             {t("nav_sign_in")}
           </Link>
         </main>
@@ -160,15 +201,12 @@ const Profile = () => {
     <div className="min-h-screen flex flex-col">
       <Header />
       <main className="container flex-1 py-10 max-w-2xl">
+
         {/* Profile header */}
         <div className="flex flex-col items-center text-center mb-8">
           <div className="relative mb-4">
             {avatarDisplay ? (
-              <img
-                src={avatarDisplay}
-                alt={nameDisplay}
-                className="h-24 w-24 rounded-full object-cover border-2 border-border"
-              />
+              <img src={avatarDisplay} alt={nameDisplay} className="h-24 w-24 rounded-full object-cover border-2 border-border" />
             ) : (
               <div className="h-24 w-24 rounded-full bg-secondary flex items-center justify-center border-2 border-border">
                 <User className="h-10 w-10 text-muted-foreground" />
@@ -200,28 +238,61 @@ const Profile = () => {
 
         {/* Quick links */}
         <div className="flex gap-3 mb-8 flex-wrap justify-center">
-          <Link
-            to="/portfolio"
-            className="inline-flex items-center gap-2 rounded-md border border-border bg-card px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-secondary"
-          >
-            <Feather className="h-4 w-4" />
-            {t("nav_poems")}
+          <Link to="/portfolio" className="inline-flex items-center gap-2 rounded-md border border-border bg-card px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-secondary">
+            <Feather className="h-4 w-4" />{t("nav_poems")}
           </Link>
-          <Link
-            to="/catalog"
-            className="inline-flex items-center gap-2 rounded-md border border-border bg-card px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-secondary"
-          >
-            <BookOpen className="h-4 w-4" />
-            {t("nav_catalog")}
+          <Link to="/catalog" className="inline-flex items-center gap-2 rounded-md border border-border bg-card px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-secondary">
+            <BookOpen className="h-4 w-4" />{t("nav_catalog")}
           </Link>
-          <Link
-            to={`/author/${user.id}`}
-            className="inline-flex items-center gap-2 rounded-md border border-border bg-card px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-secondary"
-          >
-            <Eye className="h-4 w-4" />
-            {t("profile_public_view")}
+          <Link to={`/author/${user.id}`} className="inline-flex items-center gap-2 rounded-md border border-border bg-card px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-secondary">
+            <Eye className="h-4 w-4" />{t("profile_public_view")}
           </Link>
         </div>
+
+        {/* Followers section */}
+        {followers.length > 0 && (
+          <div className="rounded-lg border border-border bg-card p-6 mb-6">
+            <h2 className="flex items-center gap-2 font-display text-lg font-semibold text-foreground mb-4">
+              <Users className="h-5 w-5 text-accent" />
+              {t("profile_followers")}
+              <span className="text-sm font-normal text-muted-foreground">({followers.length})</span>
+            </h2>
+            <div className="space-y-3">
+              {followers.map((follower: any) => {
+                const isFollowingBack = myFollowing.includes(follower.user_id);
+                return (
+                  <div key={follower.user_id} className="flex items-center justify-between gap-3">
+                    <Link
+                      to={`/author/${follower.user_id}`}
+                      className="flex items-center gap-3 hover:opacity-80 transition-opacity min-w-0"
+                    >
+                      {follower.avatar_url ? (
+                        <img src={follower.avatar_url} alt={follower.display_name} className="h-9 w-9 rounded-full object-cover border border-border shrink-0" />
+                      ) : (
+                        <div className="h-9 w-9 rounded-full bg-secondary flex items-center justify-center border border-border shrink-0">
+                          <User className="h-4 w-4 text-muted-foreground" />
+                        </div>
+                      )}
+                      <span className="text-sm font-medium text-foreground truncate">{follower.display_name}</span>
+                    </Link>
+                    <button
+                      onClick={() => toggleFollow.mutate({ targetId: follower.user_id, isFollowing: isFollowingBack })}
+                      disabled={toggleFollow.isPending}
+                      className={`shrink-0 inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition-colors disabled:opacity-50 ${
+                        isFollowingBack
+                          ? "bg-accent/10 text-accent hover:bg-accent/20"
+                          : "bg-secondary text-muted-foreground hover:text-foreground hover:bg-secondary/80"
+                      }`}
+                    >
+                      <UserPlus className="h-3 w-3" />
+                      {isFollowingBack ? t("find_unfollow") : t("find_follow")}
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         {/* Edit profile section */}
         <div className="rounded-lg border border-border bg-card p-6 mb-6">
@@ -235,8 +306,7 @@ const Profile = () => {
                 onClick={() => setEditing(true)}
                 className="inline-flex items-center gap-1.5 rounded-md bg-secondary px-3 py-1.5 text-sm font-medium text-foreground transition-colors hover:bg-secondary/80"
               >
-                <Pencil className="h-3.5 w-3.5" />
-                {t("profile_edit")}
+                <Pencil className="h-3.5 w-3.5" />{t("profile_edit")}
               </button>
             )}
           </div>
@@ -245,47 +315,27 @@ const Profile = () => {
             <div className="space-y-4">
               <div>
                 <label className="text-sm font-medium text-foreground">{t("profile_display_name")}</label>
-                <input
-                  value={displayName}
-                  onChange={(e) => setDisplayName(e.target.value)}
-                  className="mt-1 w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:ring-2 focus:ring-accent/30"
-                />
+                <input value={displayName} onChange={(e) => setDisplayName(e.target.value)}
+                  className="mt-1 w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:ring-2 focus:ring-accent/30" />
               </div>
               <div>
                 <label className="text-sm font-medium text-foreground">{t("profile_bio")}</label>
-                <textarea
-                  rows={3}
-                  value={bio}
-                  onChange={(e) => setBio(e.target.value)}
-                  className="mt-1 w-full resize-none rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:ring-2 focus:ring-accent/30"
-                />
+                <textarea rows={3} value={bio} onChange={(e) => setBio(e.target.value)}
+                  className="mt-1 w-full resize-none rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:ring-2 focus:ring-accent/30" />
               </div>
               <div>
                 <label className="text-sm font-medium text-foreground">{t("profile_avatar_url")}</label>
-                <input
-                  value={avatarUrl}
-                  onChange={(e) => setAvatarUrl(e.target.value)}
-                  placeholder="https://..."
-                  className="mt-1 w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:ring-2 focus:ring-accent/30"
-                />
+                <input value={avatarUrl} onChange={(e) => setAvatarUrl(e.target.value)} placeholder="https://..."
+                  className="mt-1 w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:ring-2 focus:ring-accent/30" />
               </div>
               <div className="flex justify-end gap-2">
-                <button
-                  onClick={() => setEditing(false)}
-                  className="rounded-md border border-border px-4 py-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
-                >
+                <button onClick={() => setEditing(false)}
+                  className="rounded-md border border-border px-4 py-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground">
                   {t("portfolio_cancel")}
                 </button>
-                <button
-                  onClick={() => updateProfile.mutate()}
-                  disabled={updateProfile.isPending}
-                  className="inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
-                >
-                  {updateProfile.isPending ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <Save className="h-4 w-4" />
-                  )}
+                <button onClick={() => updateProfile.mutate()} disabled={updateProfile.isPending}
+                  className="inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50">
+                  {updateProfile.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
                   {t("profile_save")}
                 </button>
               </div>
@@ -302,9 +352,7 @@ const Profile = () => {
               </div>
               <div className="flex justify-between py-1.5">
                 <span className="text-muted-foreground">{t("profile_bio")}</span>
-                <span className="text-foreground font-medium max-w-[60%] text-right">
-                  {(profile as any)?.bio || "—"}
-                </span>
+                <span className="text-foreground font-medium max-w-[60%] text-right">{(profile as any)?.bio || "—"}</span>
               </div>
             </div>
           )}
@@ -312,50 +360,32 @@ const Profile = () => {
 
         {/* Security */}
         <div className="rounded-lg border border-border bg-card p-6 mb-6">
-          <button
-            onClick={() => setShowPasswordSection(!showPasswordSection)}
-            className="flex w-full items-center justify-between"
-          >
+          <button onClick={() => setShowPasswordSection(!showPasswordSection)} className="flex w-full items-center justify-between">
             <h2 className="flex items-center gap-2 font-display text-lg font-semibold text-foreground">
-              <Shield className="h-5 w-5 text-accent" />
-              {t("profile_security")}
+              <Shield className="h-5 w-5 text-accent" />{t("profile_security")}
             </h2>
             <Lock className="h-4 w-4 text-muted-foreground" />
           </button>
-
           {showPasswordSection && (
             <div className="mt-4 space-y-4 animate-fade-in">
               <div>
                 <label className="text-sm font-medium text-foreground">{t("profile_new_password")}</label>
                 <div className="relative mt-1">
-                  <input
-                    type={showPassword ? "text" : "password"}
-                    value={newPassword}
-                    onChange={(e) => setNewPassword(e.target.value)}
-                    className="w-full rounded-md border border-border bg-background px-3 py-2 pr-10 text-sm text-foreground outline-none focus:ring-2 focus:ring-accent/30"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                  >
+                  <input type={showPassword ? "text" : "password"} value={newPassword} onChange={(e) => setNewPassword(e.target.value)}
+                    className="w-full rounded-md border border-border bg-background px-3 py-2 pr-10 text-sm text-foreground outline-none focus:ring-2 focus:ring-accent/30" />
+                  <button type="button" onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
                     {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>
                 </div>
               </div>
               <div>
                 <label className="text-sm font-medium text-foreground">{t("profile_confirm_password")}</label>
-                <input
-                  type="password"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  className="mt-1 w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:ring-2 focus:ring-accent/30"
-                />
+                <input type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)}
+                  className="mt-1 w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:ring-2 focus:ring-accent/30" />
               </div>
-              <button
-                onClick={changePassword}
-                className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
-              >
+              <button onClick={changePassword}
+                className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90">
                 {t("profile_change_password")}
               </button>
             </div>
@@ -364,10 +394,8 @@ const Profile = () => {
 
         {/* Sign out */}
         <div className="flex justify-center">
-          <button
-            onClick={async () => { await signOut(); navigate("/"); }}
-            className="rounded-md border border-destructive/30 px-6 py-2.5 text-sm font-medium text-destructive transition-colors hover:bg-destructive/10"
-          >
+          <button onClick={async () => { await signOut(); navigate("/"); }}
+            className="rounded-md border border-destructive/30 px-6 py-2.5 text-sm font-medium text-destructive transition-colors hover:bg-destructive/10">
             {t("nav_sign_out")}
           </button>
         </div>
