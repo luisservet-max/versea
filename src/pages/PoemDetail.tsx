@@ -7,6 +7,7 @@ import { useLikeCount, useUserLiked, useToggleLike, useSavedStatus, useToggleSav
 import { useComments, useCommentCount, usePostComment } from "@/hooks/useComments";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { tagTranslations, type Locale } from "@/i18n/translations";
 import { ArrowLeft, Heart, MessageCircle, Share2, Bookmark, Loader2, Trash2, User } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -31,6 +32,9 @@ const PoemDetail = () => {
   const [comment, setComment] = useState("");
 
   const dateFnsLocale = locale === "es" ? esLocale : locale === "fr" ? frLocale : undefined;
+
+  const translateTag = (tag: string) =>
+    tagTranslations[tag]?.[locale as Locale] ?? tag.charAt(0).toUpperCase() + tag.slice(1);
 
   const handleLike = () => {
     if (!user) { navigate("/auth"); return; }
@@ -151,7 +155,7 @@ const PoemDetail = () => {
                 key={tag}
                 className="rounded-full bg-secondary px-2.5 py-0.5 text-xs font-medium text-muted-foreground"
               >
-                {tag.charAt(0).toUpperCase() + tag.slice(1)}
+                {translateTag(tag)}
               </span>
             ))}
           </div>
