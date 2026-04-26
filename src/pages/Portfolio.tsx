@@ -5,7 +5,7 @@ import type { PoemWithAuthor } from "@/hooks/usePoems";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { Feather, Plus, Loader2, Sparkles, Pencil, Trash2, Share2, Check } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -13,12 +13,26 @@ import { supabase } from "@/integrations/supabase/client";
 const LANGUAGES = [
   "English", "Spanish", "French", "German",
   "Italian", "Portuguese", "Russian", "Chinese",
-  "Japanese", "Arabic", "Hindi", "Korean",
+  "Japanese", "Arabic", "Hindi", "Korean", "Catalan",
+];
+
+const STYLES = [
+  "Ballad",
+  "Elegy",
+  "Epic",
+  "Free Verse",
+  "Lyric",
+  "Modernist Verse",
+  "Mystical Verse",
+  "Ode",
+  "Romantic Verse",
+  "Satirical Verse",
+  "Sonnet",
 ];
 
 const EMPTY_FORM = { title: "", content: "", tagsInput: "", language: "English", style: "" };
 
-// ─── Poem Form (shared by create & edit) ──────────────────────────────────────
+// ─── Poem Form ─────────────────────────────────────────────────────────────────
 interface PoemFormProps {
   initial?: { title: string; content: string; tagsInput: string; language: string; style: string };
   onCancel: () => void;
@@ -36,24 +50,39 @@ const PoemForm = ({ initial = EMPTY_FORM, onCancel, onSubmit, isPending, submitL
   const [language, setLanguage] = useState(initial.language);
   const [style, setStyle] = useState(initial.style);
   const [analyzing, setAnalyzing] = useState(false);
+  const debounceRef = useRef<ReturnType<typeof setTimeout>>();
 
-  const handleAnalyze = async () => {
-    if (!content.trim()) { toast.error(t("portfolio_analyze_prompt")); return; }
+  const runAnalysis = async (titleVal: string, contentVal: string) => {
+    if (!contentVal.trim() || contentVal.trim().length < 20) return;
     setAnalyzing(true);
     try {
       const { data, error } = await supabase.functions.invoke("analyze-poem", {
-        body: { title, content },
+        body: { title: titleVal, content: contentVal },
       });
       if (error) throw error;
       if (data?.tags?.length) setTagsInput(data.tags.join(", "));
       if (data?.language) setLanguage(data.language);
       if (data?.style) setStyle(data.style);
-      toast.success(t("portfolio_ai_success"));
     } catch (err: any) {
-      toast.error(err.message || t("portfolio_ai_error"));
+      // Silent fail on auto-detect — user can still trigger manually
     } finally {
       setAnalyzing(false);
     }
+  };
+
+  // Auto-detect after user stops typing for 1.5 seconds
+  const handleContentChange = (val: string) => {
+    setContent(val);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      runAnalysis(title, val);
+    }, 1500);
+  };
+
+  const handleManualAnalyze = async () => {
+    if (!content.trim()) { toast.error(t("portfolio_analyze_prompt")); return; }
+    await runAnalysis(title, content);
+    toast.success(t("portfolio_ai_success"));
   };
 
   const handleSubmit = async () => {
@@ -81,23 +110,28 @@ const PoemForm = ({ initial = EMPTY_FORM, onCancel, onSubmit, isPending, submitL
         <textarea
           rows={10}
           value={content}
-          onChange={(e) => setContent(e.target.value)}
+          onChange={(e) => handleContentChange(e.target.value)}
           placeholder={t("portfolio_content_placeholder")}
           maxLength={10000}
           className="mt-1 w-full resize-none rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground outline-none focus:ring-2 focus:ring-accent/30 font-body leading-relaxed"
         />
-        <button
-          type="button"
-          onClick={handleAnalyze}
-          disabled={analyzing || !content.trim()}
-          className="mt-2 inline-flex items-center gap-1.5 rounded-md bg-accent/10 px-3 py-1.5 text-xs font-medium text-accent transition-colors hover:bg-accent/20 disabled:opacity-50"
-        >
-          {analyzing ? (
-            <><Loader2 className="h-3 w-3 animate-spin" /> {t("portfolio_analyzing")}</>
-          ) : (
-            <><Sparkles className="h-3 w-3" /> {t("portfolio_analyze")}</>
+        <div className="mt-1 flex items-center gap-2">
+          <button
+            type="button"
+            onClick={handleManualAnalyze}
+            disabled={analyzing || !content.trim()}
+            className="inline-flex items-center gap-1.5 rounded-md bg-accent/10 px-3 py-1.5 text-xs font-medium text-accent transition-colors hover:bg-accent/20 disabled:opacity-50"
+          >
+            {analyzing ? (
+              <><Loader2 className="h-3 w-3 animate-spin" /> {t("portfolio_analyzing")}</>
+            ) : (
+              <><Sparkles className="h-3 w-3" /> {t("portfolio_analyze")}</>
+            )}
+          </button>
+          {analyzing && (
+            <span className="text-xs text-muted-foreground">Detecting language & tags...</span>
           )}
-        </button>
+        </div>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2">
@@ -115,14 +149,16 @@ const PoemForm = ({ initial = EMPTY_FORM, onCancel, onSubmit, isPending, submitL
         </div>
         <div>
           <label className="text-sm font-medium text-foreground">Style</label>
-          <input
-            type="text"
+          <select
             value={style}
             onChange={(e) => setStyle(e.target.value)}
-            placeholder="e.g. Sonnet, Free Verse, Lyric…"
-            maxLength={100}
-            className="mt-1 w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground outline-none focus:ring-2 focus:ring-accent/30"
-          />
+            className="mt-1 w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:ring-2 focus:ring-accent/30"
+          >
+            <option value="">Select a style...</option>
+            {STYLES.map((s) => (
+              <option key={s} value={s}>{s}</option>
+            ))}
+          </select>
         </div>
       </div>
 
@@ -136,6 +172,7 @@ const PoemForm = ({ initial = EMPTY_FORM, onCancel, onSubmit, isPending, submitL
           maxLength={200}
           className="mt-1 w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground outline-none focus:ring-2 focus:ring-accent/30"
         />
+        <p className="mt-1 text-xs text-muted-foreground">Auto-detected from your poem. Feel free to edit.</p>
       </div>
 
       <div className="flex justify-end gap-2 pt-2">
@@ -157,7 +194,7 @@ const PoemForm = ({ initial = EMPTY_FORM, onCancel, onSubmit, isPending, submitL
   );
 };
 
-// ─── Poem Card with edit / delete / share ─────────────────────────────────────
+// ─── My Poem Card ──────────────────────────────────────────────────────────────
 interface MyPoemCardProps {
   poem: PoemWithAuthor;
   t: (key: string) => string;
@@ -189,20 +226,11 @@ const MyPoemCard = ({ poem, t }: MyPoemCardProps) => {
     });
   };
 
-  const handleUpdate = async (values: {
-    title: string;
-    content: string;
-    tags: string[];
-    language: string;
-    style: string;
-  }) => {
+  const handleUpdate = async (values: { title: string; content: string; tags: string[]; language: string; style: string }) => {
     await updatePoem.mutateAsync(
       { id: poem.id, ...values },
       {
-        onSuccess: () => {
-          toast.success("Poem updated");
-          setEditing(false);
-        },
+        onSuccess: () => { toast.success("Poem updated"); setEditing(false); },
         onError: (err: any) => toast.error(err.message),
       }
     );
@@ -249,7 +277,7 @@ const MyPoemCard = ({ poem, t }: MyPoemCardProps) => {
           </div>
 
           <Link to={`/poem/${poem.id}`} className="block mt-3">
-            <pre className="whitespace-pre-wrap font-body text-sm leading-relaxed text-foreground/70 line-clamp-3">
+            <pre className="whitespace-pre font-body text-xs leading-relaxed text-foreground/70 line-clamp-3 overflow-x-hidden">
               {poem.excerpt || poem.content.split("\n").slice(0, 2).join("\n")}
             </pre>
           </Link>
@@ -257,10 +285,7 @@ const MyPoemCard = ({ poem, t }: MyPoemCardProps) => {
           {(poem.tags || []).length > 0 && (
             <div className="mt-3 flex flex-wrap gap-1.5">
               {(poem.tags || []).slice(0, 3).map((tag) => (
-                <span
-                  key={tag}
-                  className="rounded-full bg-secondary px-2.5 py-0.5 text-xs font-medium text-muted-foreground"
-                >
+                <span key={tag} className="rounded-full bg-secondary px-2.5 py-0.5 text-xs font-medium text-muted-foreground">
                   {tag.charAt(0).toUpperCase() + tag.slice(1)}
                 </span>
               ))}
@@ -270,7 +295,6 @@ const MyPoemCard = ({ poem, t }: MyPoemCardProps) => {
           <div className="mt-4 flex items-center justify-end gap-2 border-t border-border pt-3">
             <button
               onClick={handleShare}
-              title="Copy link"
               className="flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
             >
               {copied ? <Check className="h-3.5 w-3.5 text-accent" /> : <Share2 className="h-3.5 w-3.5" />}
@@ -278,7 +302,6 @@ const MyPoemCard = ({ poem, t }: MyPoemCardProps) => {
             </button>
             <button
               onClick={() => setEditing(true)}
-              title="Edit poem"
               className="flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
             >
               <Pencil className="h-3.5 w-3.5" />
@@ -287,7 +310,6 @@ const MyPoemCard = ({ poem, t }: MyPoemCardProps) => {
             <button
               onClick={handleDelete}
               disabled={deletePoem.isPending}
-              title="Delete poem"
               className="flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium text-destructive/70 transition-colors hover:bg-destructive/10 hover:text-destructive disabled:opacity-50"
             >
               <Trash2 className="h-3.5 w-3.5" />
@@ -308,18 +330,9 @@ const Portfolio = () => {
   const publishPoem = usePublishPoem();
   const [showForm, setShowForm] = useState(false);
 
-  const handlePublish = async (values: {
-    title: string;
-    content: string;
-    tags: string[];
-    language: string;
-    style: string;
-  }) => {
+  const handlePublish = async (values: { title: string; content: string; tags: string[]; language: string; style: string }) => {
     await publishPoem.mutateAsync(values, {
-      onSuccess: () => {
-        toast.success(t("portfolio_published"));
-        setShowForm(false);
-      },
+      onSuccess: () => { toast.success(t("portfolio_published")); setShowForm(false); },
       onError: (err: any) => toast.error(err.message),
     });
   };
@@ -331,10 +344,7 @@ const Portfolio = () => {
         <main className="container flex-1 flex flex-col items-center justify-center py-20 text-center">
           <Feather className="h-12 w-12 text-muted-foreground/30 mb-4" />
           <p className="text-muted-foreground mb-4">{t("portfolio_sign_in_prompt")}</p>
-          <Link
-            to="/auth"
-            className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
-          >
+          <Link to="/auth" className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90">
             {t("nav_sign_in")}
           </Link>
         </main>
@@ -347,13 +357,10 @@ const Portfolio = () => {
     <div className="min-h-screen flex flex-col">
       <Header />
       <main className="container flex-1 py-10">
-        {/* Header row */}
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-3">
             <Feather className="h-6 w-6 text-accent" />
-            <h1 className="font-display text-3xl font-bold text-foreground">
-              {t("portfolio_title")}
-            </h1>
+            <h1 className="font-display text-3xl font-bold text-foreground">{t("portfolio_title")}</h1>
           </div>
           <button
             onClick={() => setShowForm(!showForm)}
@@ -365,12 +372,9 @@ const Portfolio = () => {
         </div>
         <p className="text-muted-foreground mb-8 max-w-lg">{t("portfolio_subtitle")}</p>
 
-        {/* New poem form */}
         {showForm && (
           <div className="mb-8 animate-fade-in rounded-lg border border-border bg-card p-6">
-            <h2 className="font-display text-xl font-semibold text-foreground mb-4">
-              {t("portfolio_new_poem")}
-            </h2>
+            <h2 className="font-display text-xl font-semibold text-foreground mb-4">{t("portfolio_new_poem")}</h2>
             <PoemForm
               onCancel={() => setShowForm(false)}
               onSubmit={handlePublish}
@@ -382,7 +386,6 @@ const Portfolio = () => {
           </div>
         )}
 
-        {/* Poem grid */}
         {isLoading ? (
           <div className="flex items-center justify-center py-20">
             <Loader2 className="h-6 w-6 animate-spin text-accent" />
@@ -394,11 +397,7 @@ const Portfolio = () => {
             </p>
             <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
               {userPoems.map((poem, i) => (
-                <div
-                  key={poem.id}
-                  className="animate-fade-in"
-                  style={{ animationDelay: `${i * 80}ms` }}
-                >
+                <div key={poem.id} className="animate-fade-in" style={{ animationDelay: `${i * 80}ms` }}>
                   <MyPoemCard poem={poem} t={t} />
                 </div>
               ))}
