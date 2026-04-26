@@ -4,6 +4,7 @@ import PoemCard from "@/components/PoemCard";
 import { usePoems } from "@/hooks/usePoems";
 import { useAvailableLanguages, useAvailableStyles } from "@/hooks/useFilterOptions";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { languageTranslations, styleTranslations, type Locale } from "@/i18n/translations";
 import { supabase } from "@/integrations/supabase/client";
 import { useState, useRef, useEffect, useCallback } from "react";
 import { Feather, Search, Loader2, Library, Users, Globe, Sparkles, ChevronDown, X, User, BookOpen } from "lucide-react";
@@ -15,13 +16,17 @@ interface FilterDropdownProps {
   label: string;
   icon: React.ReactNode;
   value: string | null;
-  options: string[];
+  // displayOptions: what the user sees; valueOptions: what gets stored/filtered on
+  displayOptions: string[];
+  valueOptions: string[];
   onChange: (val: string | null) => void;
   placeholder: string;
   noResults: string;
 }
 
-const FilterDropdown = ({ label, icon, value, options, onChange, placeholder, noResults }: FilterDropdownProps) => {
+const FilterDropdown = ({
+  label, icon, value, displayOptions, valueOptions, onChange, placeholder, noResults
+}: FilterDropdownProps) => {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
   const ref = useRef<HTMLDivElement>(null);
@@ -34,7 +39,13 @@ const FilterDropdown = ({ label, icon, value, options, onChange, placeholder, no
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
-  const filtered = options.filter((o) => o.toLowerCase().includes(search.toLowerCase()));
+  // Find display label for current value
+  const valueIndex = valueOptions.indexOf(value || "");
+  const displayValue = valueIndex >= 0 ? displayOptions[valueIndex] : null;
+
+  const filtered = displayOptions
+    .map((d, i) => ({ display: d, value: valueOptions[i] }))
+    .filter(({ display }) => display.toLowerCase().includes(search.toLowerCase()));
 
   return (
     <div ref={ref} className="relative">
@@ -47,7 +58,7 @@ const FilterDropdown = ({ label, icon, value, options, onChange, placeholder, no
         }`}
       >
         {icon}
-        <span>{value || label}</span>
+        <span>{displayValue || label}</span>
         {value ? (
           <X
             className="h-3.5 w-3.5 ml-1 hover:text-destructive"
@@ -73,17 +84,17 @@ const FilterDropdown = ({ label, icon, value, options, onChange, placeholder, no
             {filtered.length === 0 ? (
               <p className="px-3 py-2 text-xs text-muted-foreground">{noResults}</p>
             ) : (
-              filtered.map((opt) => (
+              filtered.map(({ display, value: optVal }) => (
                 <button
-                  key={opt}
-                  onClick={() => { onChange(opt); setOpen(false); setSearch(""); }}
+                  key={optVal}
+                  onClick={() => { onChange(optVal); setOpen(false); setSearch(""); }}
                   className={`w-full rounded-md px-3 py-1.5 text-left text-sm transition-colors ${
-                    opt === value
+                    optVal === value
                       ? "bg-accent text-accent-foreground"
                       : "text-foreground hover:bg-secondary"
                   }`}
                 >
-                  {opt}
+                  {display}
                 </button>
               ))
             )}
@@ -95,14 +106,13 @@ const FilterDropdown = ({ label, icon, value, options, onChange, placeholder, no
 };
 
 const Index = () => {
-  const { t } = useLanguage();
+  const { t, locale } = useLanguage();
   const [activeStyle, setActiveStyle] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [committedSearch, setCommittedSearch] = useState("");
   const [source, setSource] = useState<SourceFilter>("all");
   const [language, setLanguage] = useState<string | null>(null);
 
-  // Autocomplete state
   const [suggestions, setSuggestions] = useState<{ type: "poem" | "author" | "classic_author"; id: string; label: string; sub?: string }[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [sugLoading, setSugLoading] = useState(false);
@@ -147,6 +157,14 @@ const Index = () => {
 
   const { data: availableLanguages = [] } = useAvailableLanguages();
   const { data: availableStyles = [] } = useAvailableStyles();
+
+  // Translate filter options for display while keeping English values for DB queries
+  const translatedLanguages = availableLanguages.map(
+    (l) => languageTranslations[l]?.[locale as Locale] ?? l
+  );
+  const translatedStyles = availableStyles.map(
+    (s) => styleTranslations[s]?.[locale as Locale] ?? s
+  );
 
   const { data, isLoading, fetchNextPage, hasNextPage, isFetchingNextPage } = usePoems({
     search: committedSearch || undefined,
@@ -266,19 +284,21 @@ const Index = () => {
             label={t("filter_language")}
             icon={<Globe className="h-3.5 w-3.5" />}
             value={language}
-            options={availableLanguages}
+            displayOptions={translatedLanguages}
+            valueOptions={availableLanguages}
             onChange={setLanguage}
             placeholder={t("filter_search_languages")}
             noResults={t("no_results")}
           />
 
           <FilterDropdown
-            label="Style"
+            label={t("filter_style")}
             icon={<Sparkles className="h-3.5 w-3.5" />}
             value={activeStyle}
-            options={availableStyles}
+            displayOptions={translatedStyles}
+            valueOptions={availableStyles}
             onChange={setActiveStyle}
-            placeholder="Search styles..."
+            placeholder={t("filter_search_styles")}
             noResults={t("no_results")}
           />
         </div>
@@ -288,7 +308,9 @@ const Index = () => {
       <main className="container flex-1 py-10">
         <h2 className="font-display text-2xl font-semibold text-foreground mb-6">
           {activeStyle ? (
-            <>{t("featured_poems")} — <span className="text-accent italic">{activeStyle}</span></>
+            <>{t("featured_poems")} — <span className="text-accent italic">
+              {styleTranslations[activeStyle]?.[locale as Locale] ?? activeStyle}
+            </span></>
           ) : (
             t("featured_poems")
           )}
@@ -307,7 +329,7 @@ const Index = () => {
                   className="animate-fade-in"
                   style={{ animationDelay: `${Math.min(i, 5) * 100}ms` }}
                 >
-                  <PoemCard poem={poem} />
+                  <PoemCard poem={poem} locale={locale as Locale} />
                 </div>
               ))}
             </div>
@@ -341,4 +363,3 @@ const Index = () => {
 };
 
 export default Index;
-  
