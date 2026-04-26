@@ -11,11 +11,11 @@ const LanguageContext = createContext<LanguageContextType | undefined>(undefined
 
 function detectLocale(): Locale {
   const stored = localStorage.getItem("versea-locale");
-  if (stored && (stored === "en" || stored === "es" || stored === "fr")) return stored;
-
+  if (stored && (stored === "en" || stored === "es" || stored === "fr" || stored === "ca")) return stored;
   const browserLang = navigator.language.slice(0, 2).toLowerCase();
   if (browserLang === "es") return "es";
   if (browserLang === "fr") return "fr";
+  if (browserLang === "ca") return "ca";
   return "en";
 }
 
