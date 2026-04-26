@@ -61,21 +61,35 @@ const Profile = () => {
     },
   });
 
-  // Followers list
+  // Followers list — two simple queries instead of a join
   const { data: followers = [] } = useQuery({
     queryKey: ["my-followers", user?.id],
     enabled: !!user,
     queryFn: async () => {
-      const { data, error } = await supabase
+      // Step 1: get follower IDs
+      const { data: followRows, error } = await supabase
         .from("follows")
-        .select("follower_id, profiles!follows_follower_id_fkey(user_id, display_name, avatar_url)")
+        .select("follower_id")
         .eq("following_id", user!.id)
         .order("created_at", { ascending: false });
       if (error) throw error;
-      return (data || []).map((row: any) => ({
-        user_id: row.follower_id,
-        display_name: row.profiles?.display_name || "Poet",
-        avatar_url: row.profiles?.avatar_url || null,
+      if (!followRows || followRows.length === 0) return [];
+
+      const followerIds = followRows.map((r: any) => r.follower_id);
+
+      // Step 2: get their profiles
+      const { data: profileRows } = await supabase
+        .from("profiles")
+        .select("user_id, display_name, avatar_url")
+        .in("user_id", followerIds);
+
+      const profileMap: Record<string, any> = {};
+      (profileRows || []).forEach((p: any) => { profileMap[p.user_id] = p; });
+
+      return followerIds.map((id: string) => ({
+        user_id: id,
+        display_name: profileMap[id]?.display_name || "Poet",
+        avatar_url: profileMap[id]?.avatar_url || null,
       }));
     },
   });
@@ -120,7 +134,7 @@ const Profile = () => {
   const [bio, setBio] = useState("");
   const [avatarUrl, setAvatarUrl] = useState("");
 
-  // Password change state
+  // Password state
   const [showPasswordSection, setShowPasswordSection] = useState(false);
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -250,13 +264,15 @@ const Profile = () => {
         </div>
 
         {/* Followers section */}
-        {followers.length > 0 && (
-          <div className="rounded-lg border border-border bg-card p-6 mb-6">
-            <h2 className="flex items-center gap-2 font-display text-lg font-semibold text-foreground mb-4">
-              <Users className="h-5 w-5 text-accent" />
-              {t("profile_followers")}
-              <span className="text-sm font-normal text-muted-foreground">({followers.length})</span>
-            </h2>
+        <div className="rounded-lg border border-border bg-card p-6 mb-6">
+          <h2 className="flex items-center gap-2 font-display text-lg font-semibold text-foreground mb-4">
+            <Users className="h-5 w-5 text-accent" />
+            {t("profile_followers")}
+            <span className="text-sm font-normal text-muted-foreground">({stats?.followers ?? 0})</span>
+          </h2>
+          {followers.length === 0 ? (
+            <p className="text-sm text-muted-foreground">{t("feed_no_following")}</p>
+          ) : (
             <div className="space-y-3">
               {followers.map((follower: any) => {
                 const isFollowingBack = myFollowing.includes(follower.user_id);
@@ -267,7 +283,8 @@ const Profile = () => {
                       className="flex items-center gap-3 hover:opacity-80 transition-opacity min-w-0"
                     >
                       {follower.avatar_url ? (
-                        <img src={follower.avatar_url} alt={follower.display_name} className="h-9 w-9 rounded-full object-cover border border-border shrink-0" />
+                        <img src={follower.avatar_url} alt={follower.display_name}
+                          className="h-9 w-9 rounded-full object-cover border border-border shrink-0" />
                       ) : (
                         <div className="h-9 w-9 rounded-full bg-secondary flex items-center justify-center border border-border shrink-0">
                           <User className="h-4 w-4 text-muted-foreground" />
@@ -291,10 +308,10 @@ const Profile = () => {
                 );
               })}
             </div>
-          </div>
-        )}
+          )}
+        </div>
 
-        {/* Edit profile section */}
+        {/* Edit profile */}
         <div className="rounded-lg border border-border bg-card p-6 mb-6">
           <div className="flex items-center justify-between mb-4">
             <h2 className="flex items-center gap-2 font-display text-lg font-semibold text-foreground">
@@ -302,15 +319,12 @@ const Profile = () => {
               {t("profile_edit_title")}
             </h2>
             {!editing && (
-              <button
-                onClick={() => setEditing(true)}
-                className="inline-flex items-center gap-1.5 rounded-md bg-secondary px-3 py-1.5 text-sm font-medium text-foreground transition-colors hover:bg-secondary/80"
-              >
+              <button onClick={() => setEditing(true)}
+                className="inline-flex items-center gap-1.5 rounded-md bg-secondary px-3 py-1.5 text-sm font-medium text-foreground transition-colors hover:bg-secondary/80">
                 <Pencil className="h-3.5 w-3.5" />{t("profile_edit")}
               </button>
             )}
           </div>
-
           {editing ? (
             <div className="space-y-4">
               <div>
