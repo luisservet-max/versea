@@ -2,16 +2,14 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import PoemCard from "@/components/PoemCard";
 import { usePoems } from "@/hooks/usePoems";
-import { useAvailableLanguages, useAvailableTags } from "@/hooks/useFilterOptions";
+import { useAvailableLanguages, useAvailableStyles } from "@/hooks/useFilterOptions";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useState, useRef, useEffect, useCallback } from "react";
-import { Feather, Search, Loader2, Library, Users, Globe, Tag, ChevronDown, X, User, BookOpen } from "lucide-react";
+import { Feather, Search, Loader2, Library, Users, Globe, Sparkles, ChevronDown, X, User, BookOpen } from "lucide-react";
 import { Link } from "react-router-dom";
 
 type SourceFilter = "all" | "classic" | "community";
-
-const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
 interface FilterDropdownProps {
   label: string;
@@ -98,7 +96,7 @@ const FilterDropdown = ({ label, icon, value, options, onChange, placeholder, no
 
 const Index = () => {
   const { t } = useLanguage();
-  const [activeTag, setActiveTag] = useState<string | null>(null);
+  const [activeStyle, setActiveStyle] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [committedSearch, setCommittedSearch] = useState("");
   const [source, setSource] = useState<SourceFilter>("all");
@@ -148,13 +146,13 @@ const Index = () => {
   };
 
   const { data: availableLanguages = [] } = useAvailableLanguages();
-  const { data: availableTags = [] } = useAvailableTags();
+  const { data: availableStyles = [] } = useAvailableStyles();
 
   const { data, isLoading, fetchNextPage, hasNextPage, isFetchingNextPage } = usePoems({
-    tag: activeTag,
     search: committedSearch || undefined,
     source,
     language,
+    style: activeStyle,
   });
 
   const poems = data?.pages.flat() ?? [];
@@ -186,7 +184,9 @@ const Index = () => {
                 type="text"
                 value={searchQuery}
                 onChange={(e) => handleSearchInput(e.target.value)}
-                onKeyDown={(e) => { if (e.key === "Enter") { setCommittedSearch(searchQuery); setShowSuggestions(false); } }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") { setCommittedSearch(searchQuery); setShowSuggestions(false); }
+                }}
                 onFocus={() => { if (suggestions.length > 0) setShowSuggestions(true); }}
                 placeholder={t("hero_search_placeholder")}
                 className="flex-1 bg-transparent text-sm text-foreground placeholder:text-muted-foreground outline-none"
@@ -200,9 +200,10 @@ const Index = () => {
                   </div>
                 ) : (
                   suggestions.map((s, i) => {
-                    const href = s.type === "poem"
-                      ? `/poem/${s.id}`
-                      : s.type === "author"
+                    const href =
+                      s.type === "poem"
+                        ? `/poem/${s.id}`
+                        : s.type === "author"
                         ? `/author/${s.id}`
                         : `/classic-author/${encodeURIComponent(s.id)}`;
                     const Icon = s.type === "poem" ? BookOpen : User;
@@ -216,9 +217,13 @@ const Index = () => {
                         <Icon className="h-4 w-4 shrink-0 text-muted-foreground" />
                         <div className="min-w-0">
                           <span className="font-medium text-foreground">{s.label}</span>
-                          {s.sub && <span className="ml-1.5 text-xs text-muted-foreground">{t("by")} {s.sub}</span>}
+                          {s.sub && (
+                            <span className="ml-1.5 text-xs text-muted-foreground">
+                              {t("by")} {s.sub}
+                            </span>
+                          )}
                           <span className="ml-1.5 text-[10px] text-accent/70 uppercase">
-                            {s.type === "poem" ? t("filter_style") : s.type === "classic_author" ? t("filter_classic") : t("filter_community")}
+                            {s.type === "classic_author" ? t("filter_classic") : t("filter_community")}
                           </span>
                         </div>
                       </Link>
@@ -233,6 +238,7 @@ const Index = () => {
         <div className="absolute -bottom-20 -left-20 h-60 w-60 rounded-full bg-sage/5 blur-3xl" />
       </section>
 
+      {/* Filter bar */}
       <section className="border-b border-border bg-card">
         <div className="container py-4 flex flex-wrap items-center gap-2">
           {([
@@ -267,12 +273,12 @@ const Index = () => {
           />
 
           <FilterDropdown
-            label={t("filter_style")}
-            icon={<Tag className="h-3.5 w-3.5" />}
-            value={activeTag ? capitalize(activeTag) : null}
-            options={availableTags.map(capitalize)}
-            onChange={(val) => setActiveTag(val ? val.toLowerCase() : null)}
-            placeholder={t("filter_search_styles")}
+            label="Style"
+            icon={<Sparkles className="h-3.5 w-3.5" />}
+            value={activeStyle}
+            options={availableStyles}
+            onChange={setActiveStyle}
+            placeholder="Search styles..."
             noResults={t("no_results")}
           />
         </div>
@@ -281,8 +287,8 @@ const Index = () => {
       {/* Poems grid */}
       <main className="container flex-1 py-10">
         <h2 className="font-display text-2xl font-semibold text-foreground mb-6">
-          {activeTag ? (
-            <>{t("poems_tagged")} <span className="text-accent capitalize">"{activeTag}"</span></>
+          {activeStyle ? (
+            <>{t("featured_poems")} — <span className="text-accent italic">{activeStyle}</span></>
           ) : (
             t("featured_poems")
           )}
