@@ -1,46 +1,53 @@
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
-import { useMyPoems, usePublishPoem } from "@/hooks/usePoems";
+import { useMyPoems, usePublishPoem, useUpdatePoem, useDeletePoem } from "@/hooks/usePoems";
+import type { PoemWithAuthor } from "@/hooks/usePoems";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { Feather, Plus, Loader2, Sparkles } from "lucide-react";
-import PoemCard from "@/components/PoemCard";
+import { Feather, Plus, Loader2, Sparkles, Pencil, Trash2, Share2, Check } from "lucide-react";
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 
-const LANGUAGES = ["English", "Spanish", "French", "German", "Italian", "Portuguese", "Russian", "Chinese", "Japanese", "Arabic", "Hindi", "Korean"];
+const LANGUAGES = [
+  "English", "Spanish", "French", "German",
+  "Italian", "Portuguese", "Russian", "Chinese",
+  "Japanese", "Arabic", "Hindi", "Korean",
+];
 
-const Portfolio = () => {
-  const { user } = useAuth();
-  const { t } = useLanguage();
-  const { data: userPoems = [], isLoading } = useMyPoems();
-  const publishPoem = usePublishPoem();
-  const [showForm, setShowForm] = useState(false);
-  const [title, setTitle] = useState("");
-  const [content, setContent] = useState("");
-  const [tagsInput, setTagsInput] = useState("");
-  const [language, setLanguage] = useState("English");
+const EMPTY_FORM = { title: "", content: "", tagsInput: "", language: "English", style: "" };
+
+// ─── Poem Form (shared by create & edit) ──────────────────────────────────────
+interface PoemFormProps {
+  initial?: { title: string; content: string; tagsInput: string; language: string; style: string };
+  onCancel: () => void;
+  onSubmit: (values: { title: string; content: string; tags: string[]; language: string; style: string }) => Promise<void>;
+  isPending: boolean;
+  submitLabel: string;
+  pendingLabel: string;
+  t: (key: string) => string;
+}
+
+const PoemForm = ({ initial = EMPTY_FORM, onCancel, onSubmit, isPending, submitLabel, pendingLabel, t }: PoemFormProps) => {
+  const [title, setTitle] = useState(initial.title);
+  const [content, setContent] = useState(initial.content);
+  const [tagsInput, setTagsInput] = useState(initial.tagsInput);
+  const [language, setLanguage] = useState(initial.language);
+  const [style, setStyle] = useState(initial.style);
   const [analyzing, setAnalyzing] = useState(false);
 
   const handleAnalyze = async () => {
-    if (!content.trim()) {
-      toast.error(t("portfolio_analyze_prompt"));
-      return;
-    }
+    if (!content.trim()) { toast.error(t("portfolio_analyze_prompt")); return; }
     setAnalyzing(true);
     try {
       const { data, error } = await supabase.functions.invoke("analyze-poem", {
         body: { title, content },
       });
       if (error) throw error;
-      if (data?.tags?.length) {
-        setTagsInput(data.tags.join(", "));
-      }
-      if (data?.language) {
-        setLanguage(data.language);
-      }
+      if (data?.tags?.length) setTagsInput(data.tags.join(", "));
+      if (data?.language) setLanguage(data.language);
+      if (data?.style) setStyle(data.style);
       toast.success(t("portfolio_ai_success"));
     } catch (err: any) {
       toast.error(err.message || t("portfolio_ai_error"));
@@ -49,28 +56,272 @@ const Portfolio = () => {
     }
   };
 
-  const handlePublish = async () => {
-    if (!title.trim() || !content.trim()) {
-      toast.error(t("portfolio_required"));
-      return;
-    }
+  const handleSubmit = async () => {
+    if (!title.trim() || !content.trim()) { toast.error(t("portfolio_required")); return; }
+    const tags = tagsInput.split(",").map((s) => s.trim().toLowerCase()).filter(Boolean);
+    await onSubmit({ title, content, tags, language, style });
+  };
 
-    const tags = tagsInput
-      .split(",")
-      .map((t) => t.trim().toLowerCase())
-      .filter(Boolean);
+  return (
+    <div className="space-y-4">
+      <div>
+        <label className="text-sm font-medium text-foreground">{t("portfolio_title_label")}</label>
+        <input
+          type="text"
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          placeholder={t("portfolio_title_placeholder")}
+          maxLength={200}
+          className="mt-1 w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground outline-none focus:ring-2 focus:ring-accent/30"
+        />
+      </div>
 
+      <div>
+        <label className="text-sm font-medium text-foreground">{t("portfolio_content_label")}</label>
+        <textarea
+          rows={10}
+          value={content}
+          onChange={(e) => setContent(e.target.value)}
+          placeholder={t("portfolio_content_placeholder")}
+          maxLength={10000}
+          className="mt-1 w-full resize-none rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground outline-none focus:ring-2 focus:ring-accent/30 font-body leading-relaxed"
+        />
+        <button
+          type="button"
+          onClick={handleAnalyze}
+          disabled={analyzing || !content.trim()}
+          className="mt-2 inline-flex items-center gap-1.5 rounded-md bg-accent/10 px-3 py-1.5 text-xs font-medium text-accent transition-colors hover:bg-accent/20 disabled:opacity-50"
+        >
+          {analyzing ? (
+            <><Loader2 className="h-3 w-3 animate-spin" /> {t("portfolio_analyzing")}</>
+          ) : (
+            <><Sparkles className="h-3 w-3" /> {t("portfolio_analyze")}</>
+          )}
+        </button>
+      </div>
+
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div>
+          <label className="text-sm font-medium text-foreground">{t("portfolio_language_label")}</label>
+          <select
+            value={language}
+            onChange={(e) => setLanguage(e.target.value)}
+            className="mt-1 w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:ring-2 focus:ring-accent/30"
+          >
+            {LANGUAGES.map((lang) => (
+              <option key={lang} value={lang}>{lang}</option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label className="text-sm font-medium text-foreground">Style</label>
+          <input
+            type="text"
+            value={style}
+            onChange={(e) => setStyle(e.target.value)}
+            placeholder="e.g. Sonnet, Free Verse, Lyric…"
+            maxLength={100}
+            className="mt-1 w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground outline-none focus:ring-2 focus:ring-accent/30"
+          />
+        </div>
+      </div>
+
+      <div>
+        <label className="text-sm font-medium text-foreground">{t("portfolio_tags_label")}</label>
+        <input
+          type="text"
+          value={tagsInput}
+          onChange={(e) => setTagsInput(e.target.value)}
+          placeholder={t("portfolio_tags_placeholder")}
+          maxLength={200}
+          className="mt-1 w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground outline-none focus:ring-2 focus:ring-accent/30"
+        />
+      </div>
+
+      <div className="flex justify-end gap-2 pt-2">
+        <button
+          onClick={onCancel}
+          className="rounded-md border border-border px-4 py-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+        >
+          {t("portfolio_cancel")}
+        </button>
+        <button
+          onClick={handleSubmit}
+          disabled={isPending}
+          className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
+        >
+          {isPending ? pendingLabel : submitLabel}
+        </button>
+      </div>
+    </div>
+  );
+};
+
+// ─── Poem Card with edit / delete / share ─────────────────────────────────────
+interface MyPoemCardProps {
+  poem: PoemWithAuthor;
+  t: (key: string) => string;
+}
+
+const MyPoemCard = ({ poem, t }: MyPoemCardProps) => {
+  const updatePoem = useUpdatePoem();
+  const deletePoem = useDeletePoem();
+  const [editing, setEditing] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  const handleShare = async () => {
+    const url = `${window.location.origin}/poem/${poem.id}`;
     try {
-      await publishPoem.mutateAsync({ title, content, tags, language });
-      toast.success(t("portfolio_published"));
-      setTitle("");
-      setContent("");
-      setTagsInput("");
-      setLanguage("English");
-      setShowForm(false);
-    } catch (err: any) {
-      toast.error(err.message);
+      await navigator.clipboard.writeText(url);
+      setCopied(true);
+      toast.success("Link copied to clipboard");
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      toast.error("Could not copy link");
     }
+  };
+
+  const handleDelete = () => {
+    if (!window.confirm(t("detail_delete_confirm"))) return;
+    deletePoem.mutate(poem.id, {
+      onSuccess: () => toast.success(t("detail_deleted")),
+      onError: (err: any) => toast.error(err.message),
+    });
+  };
+
+  const handleUpdate = async (values: {
+    title: string;
+    content: string;
+    tags: string[];
+    language: string;
+    style: string;
+  }) => {
+    await updatePoem.mutateAsync(
+      { id: poem.id, ...values },
+      {
+        onSuccess: () => {
+          toast.success("Poem updated");
+          setEditing(false);
+        },
+        onError: (err: any) => toast.error(err.message),
+      }
+    );
+  };
+
+  return (
+    <article className="rounded-lg border border-border bg-card transition-all hover:shadow-md hover:border-accent/40">
+      {editing ? (
+        <div className="p-5">
+          <h3 className="font-display text-base font-semibold text-foreground mb-4">
+            Editing — <span className="text-accent">{poem.title}</span>
+          </h3>
+          <PoemForm
+            initial={{
+              title: poem.title,
+              content: poem.content,
+              tagsInput: (poem.tags || []).join(", "),
+              language: poem.language || "English",
+              style: poem.style || "",
+            }}
+            onCancel={() => setEditing(false)}
+            onSubmit={handleUpdate}
+            isPending={updatePoem.isPending}
+            submitLabel="Save changes"
+            pendingLabel="Saving…"
+            t={t}
+          />
+        </div>
+      ) : (
+        <div className="p-5">
+          <Link to={`/poem/${poem.id}`} className="block group">
+            <h3 className="font-display text-lg font-semibold text-foreground group-hover:text-accent transition-colors">
+              {poem.title}
+            </h3>
+          </Link>
+
+          <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+            {poem.language && (
+              <span className="rounded-full bg-secondary px-2 py-0.5">{poem.language}</span>
+            )}
+            {poem.style && (
+              <span className="rounded-full bg-accent/10 px-2 py-0.5 text-accent">{poem.style}</span>
+            )}
+          </div>
+
+          <Link to={`/poem/${poem.id}`} className="block mt-3">
+            <pre className="whitespace-pre-wrap font-body text-sm leading-relaxed text-foreground/70 line-clamp-3">
+              {poem.excerpt || poem.content.split("\n").slice(0, 2).join("\n")}
+            </pre>
+          </Link>
+
+          {(poem.tags || []).length > 0 && (
+            <div className="mt-3 flex flex-wrap gap-1.5">
+              {(poem.tags || []).slice(0, 3).map((tag) => (
+                <span
+                  key={tag}
+                  className="rounded-full bg-secondary px-2.5 py-0.5 text-xs font-medium text-muted-foreground"
+                >
+                  {tag.charAt(0).toUpperCase() + tag.slice(1)}
+                </span>
+              ))}
+            </div>
+          )}
+
+          <div className="mt-4 flex items-center justify-end gap-2 border-t border-border pt-3">
+            <button
+              onClick={handleShare}
+              title="Copy link"
+              className="flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+            >
+              {copied ? <Check className="h-3.5 w-3.5 text-accent" /> : <Share2 className="h-3.5 w-3.5" />}
+              {copied ? "Copied!" : "Share"}
+            </button>
+            <button
+              onClick={() => setEditing(true)}
+              title="Edit poem"
+              className="flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+            >
+              <Pencil className="h-3.5 w-3.5" />
+              Edit
+            </button>
+            <button
+              onClick={handleDelete}
+              disabled={deletePoem.isPending}
+              title="Delete poem"
+              className="flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium text-destructive/70 transition-colors hover:bg-destructive/10 hover:text-destructive disabled:opacity-50"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+              Delete
+            </button>
+          </div>
+        </div>
+      )}
+    </article>
+  );
+};
+
+// ─── Portfolio Page ────────────────────────────────────────────────────────────
+const Portfolio = () => {
+  const { user } = useAuth();
+  const { t } = useLanguage();
+  const { data: userPoems = [], isLoading } = useMyPoems();
+  const publishPoem = usePublishPoem();
+  const [showForm, setShowForm] = useState(false);
+
+  const handlePublish = async (values: {
+    title: string;
+    content: string;
+    tags: string[];
+    language: string;
+    style: string;
+  }) => {
+    await publishPoem.mutateAsync(values, {
+      onSuccess: () => {
+        toast.success(t("portfolio_published"));
+        setShowForm(false);
+      },
+      onError: (err: any) => toast.error(err.message),
+    });
   };
 
   if (!user) {
@@ -96,10 +347,13 @@ const Portfolio = () => {
     <div className="min-h-screen flex flex-col">
       <Header />
       <main className="container flex-1 py-10">
-        <div className="flex items-center justify-between mb-8">
+        {/* Header row */}
+        <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-3">
             <Feather className="h-6 w-6 text-accent" />
-            <h1 className="font-display text-3xl font-bold text-foreground">{t("portfolio_title")}</h1>
+            <h1 className="font-display text-3xl font-bold text-foreground">
+              {t("portfolio_title")}
+            </h1>
           </div>
           <button
             onClick={() => setShowForm(!showForm)}
@@ -109,106 +363,47 @@ const Portfolio = () => {
             {t("portfolio_write")}
           </button>
         </div>
-        <p className="text-muted-foreground mb-8 max-w-lg">
-          {t("portfolio_subtitle")}
-        </p>
+        <p className="text-muted-foreground mb-8 max-w-lg">{t("portfolio_subtitle")}</p>
 
+        {/* New poem form */}
         {showForm && (
           <div className="mb-8 animate-fade-in rounded-lg border border-border bg-card p-6">
-            <h2 className="font-display text-xl font-semibold text-foreground mb-4">{t("portfolio_new_poem")}</h2>
-            <div className="space-y-4">
-              <div>
-                <label className="text-sm font-medium text-foreground">{t("portfolio_title_label")}</label>
-                <input
-                  type="text"
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  placeholder={t("portfolio_title_placeholder")}
-                  maxLength={200}
-                  className="mt-1 w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground outline-none focus:ring-2 focus:ring-accent/30"
-                />
-              </div>
-              <div>
-                <label className="text-sm font-medium text-foreground">{t("portfolio_content_label")}</label>
-                <textarea
-                  rows={8}
-                  value={content}
-                  onChange={(e) => setContent(e.target.value)}
-                  placeholder={t("portfolio_content_placeholder")}
-                  maxLength={10000}
-                  className="mt-1 w-full resize-none rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground outline-none focus:ring-2 focus:ring-accent/30 font-body"
-                />
-                <button
-                  type="button"
-                  onClick={handleAnalyze}
-                  disabled={analyzing || !content.trim()}
-                  className="mt-2 inline-flex items-center gap-1.5 rounded-md bg-accent/10 px-3 py-1.5 text-xs font-medium text-accent transition-colors hover:bg-accent/20 disabled:opacity-50"
-                >
-                  {analyzing ? (
-                    <><Loader2 className="h-3 w-3 animate-spin" /> {t("portfolio_analyzing")}</>
-                  ) : (
-                    <><Sparkles className="h-3 w-3" /> {t("portfolio_analyze")}</>
-                  )}
-                </button>
-              </div>
-              <div>
-                <label className="text-sm font-medium text-foreground">{t("portfolio_tags_label")}</label>
-                <input
-                  type="text"
-                  value={tagsInput}
-                  onChange={(e) => setTagsInput(e.target.value)}
-                  placeholder={t("portfolio_tags_placeholder")}
-                  maxLength={200}
-                  className="mt-1 w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground outline-none focus:ring-2 focus:ring-accent/30"
-                />
-              </div>
-              <div>
-                <label className="text-sm font-medium text-foreground">{t("portfolio_language_label")}</label>
-                <select
-                  value={language}
-                  onChange={(e) => setLanguage(e.target.value)}
-                  className="mt-1 w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:ring-2 focus:ring-accent/30"
-                >
-                  {LANGUAGES.map((lang) => (
-                    <option key={lang} value={lang}>{lang}</option>
-                  ))}
-                </select>
-              </div>
-              <div className="flex justify-end gap-2">
-                <button
-                  onClick={() => setShowForm(false)}
-                  className="rounded-md border border-border px-4 py-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
-                >
-                  {t("portfolio_cancel")}
-                </button>
-                <button
-                  onClick={handlePublish}
-                  disabled={publishPoem.isPending}
-                  className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
-                >
-                  {publishPoem.isPending ? t("portfolio_publishing") : t("portfolio_publish")}
-                </button>
-              </div>
-            </div>
+            <h2 className="font-display text-xl font-semibold text-foreground mb-4">
+              {t("portfolio_new_poem")}
+            </h2>
+            <PoemForm
+              onCancel={() => setShowForm(false)}
+              onSubmit={handlePublish}
+              isPending={publishPoem.isPending}
+              submitLabel={t("portfolio_publish")}
+              pendingLabel={t("portfolio_publishing")}
+              t={t}
+            />
           </div>
         )}
 
+        {/* Poem grid */}
         {isLoading ? (
           <div className="flex items-center justify-center py-20">
             <Loader2 className="h-6 w-6 animate-spin text-accent" />
           </div>
         ) : userPoems.length > 0 ? (
-          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-            {userPoems.map((poem, i) => (
-              <div
-                key={poem.id}
-                className="animate-fade-in"
-                style={{ animationDelay: `${i * 100}ms` }}
-              >
-                <PoemCard poem={poem} />
-              </div>
-            ))}
-          </div>
+          <>
+            <p className="text-xs text-muted-foreground mb-4">
+              {userPoems.length} {userPoems.length === 1 ? "poem" : "poems"} published
+            </p>
+            <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+              {userPoems.map((poem, i) => (
+                <div
+                  key={poem.id}
+                  className="animate-fade-in"
+                  style={{ animationDelay: `${i * 80}ms` }}
+                >
+                  <MyPoemCard poem={poem} t={t} />
+                </div>
+              ))}
+            </div>
+          </>
         ) : (
           <div className="flex flex-col items-center py-20 text-center">
             <Feather className="h-12 w-12 text-muted-foreground/30 mb-4" />
