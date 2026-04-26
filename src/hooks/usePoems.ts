@@ -45,9 +45,10 @@ export const usePoems = (options?: {
   search?: string;
   source?: "all" | "classic" | "community";
   language?: string | null;
+  style?: string | null;
 }) => {
   return useInfiniteQuery({
-    queryKey: ["poems", options?.tag, options?.search, options?.source, options?.language],
+    queryKey: ["poems", options?.tag, options?.search, options?.source, options?.language, options?.style],
     queryFn: async ({ pageParam = 0 }) => {
       let query = supabase
         .from("poems")
@@ -55,25 +56,16 @@ export const usePoems = (options?: {
         .order("created_at", { ascending: false })
         .range(pageParam, pageParam + PAGE_SIZE - 1);
 
-      if (options?.tag) {
-        query = query.contains("tags", [options.tag]);
-      }
-
+      if (options?.tag) query = query.contains("tags", [options.tag]);
       if (options?.search) {
         query = query.or(
           `title.ilike.%${options.search}%,content.ilike.%${options.search}%,author_name.ilike.%${options.search}%`
         );
       }
-
-      if (options?.source === "classic") {
-        query = query.is("user_id", null);
-      } else if (options?.source === "community") {
-        query = query.not("user_id", "is", null);
-      }
-
-      if (options?.language) {
-        query = query.eq("language", options.language);
-      }
+      if (options?.source === "classic") query = query.is("user_id", null);
+      else if (options?.source === "community") query = query.not("user_id", "is", null);
+      if (options?.language) query = query.eq("language", options.language);
+      if (options?.style) query = query.eq("style", options.style);
 
       const { data, error } = await query;
       if (error) throw error;
@@ -169,6 +161,8 @@ export const usePublishPoem = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["poems"] });
       queryClient.invalidateQueries({ queryKey: ["my-poems"] });
+      queryClient.invalidateQueries({ queryKey: ["available-styles"] });
+      queryClient.invalidateQueries({ queryKey: ["available-languages"] });
     },
   });
 };
@@ -210,6 +204,7 @@ export const useUpdatePoem = () => {
       queryClient.invalidateQueries({ queryKey: ["poems"] });
       queryClient.invalidateQueries({ queryKey: ["my-poems"] });
       queryClient.invalidateQueries({ queryKey: ["poem", data.id] });
+      queryClient.invalidateQueries({ queryKey: ["available-styles"] });
     },
   });
 };
@@ -225,6 +220,7 @@ export const useDeletePoem = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["poems"] });
       queryClient.invalidateQueries({ queryKey: ["my-poems"] });
+      queryClient.invalidateQueries({ queryKey: ["available-styles"] });
     },
   });
 };
