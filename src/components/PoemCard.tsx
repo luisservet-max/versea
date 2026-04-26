@@ -71,7 +71,7 @@ const PoemCard = ({ poem }: PoemCardProps) => {
       </p>
 
       <Link to={`/poem/${poem.id}`} className="block">
-        <pre className="mt-2 whitespace-pre-wrap font-body text-sm leading-relaxed text-foreground/80 line-clamp-4">
+        <pre className="mt-2 whitespace-pre-wrap font-body text-xs leading-relaxed text-foreground/80 line-clamp-4 max-w-prose overflow-x-hidden">
           {poem.excerpt || poem.content.split("\n").slice(0, 2).join("\n")}
         </pre>
       </Link>
