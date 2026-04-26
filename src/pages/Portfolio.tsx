@@ -5,11 +5,12 @@ import type { PoemWithAuthor } from "@/hooks/usePoems";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { styleTranslations, languageTranslations, type Locale } from "@/i18n/translations";
-import { Feather, Plus, Loader2, Sparkles, Pencil, Trash2, Share2, Check } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { useQuery } from "@tanstack/react-query";
+import { Feather, Plus, Loader2, Sparkles, Pencil, Trash2, Share2, Check, Heart, Bookmark, MessageCircle } from "lucide-react";
 import { useState, useRef } from "react";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
 
 const LANGUAGE_KEYS = [
   "English", "Spanish", "Catalan", "French", "German",
@@ -24,6 +25,25 @@ const STYLE_KEYS = [
 ];
 
 const EMPTY_FORM = { title: "", content: "", tagsInput: "", language: "English", style: "" };
+
+// ─── Poem stats hook ───────────────────────────────────────────────────────────
+const usePoemStats = (poemId: string) => {
+  return useQuery({
+    queryKey: ["poem-stats", poemId],
+    queryFn: async () => {
+      const [likesRes, savesRes, commentsRes] = await Promise.all([
+        supabase.from("likes").select("*", { count: "exact", head: true }).eq("poem_id", poemId),
+        supabase.from("saved_poems").select("*", { count: "exact", head: true }).eq("poem_id", poemId),
+        supabase.from("comments").select("*", { count: "exact", head: true }).eq("poem_id", poemId),
+      ]);
+      return {
+        likes: likesRes.count || 0,
+        saves: savesRes.count || 0,
+        comments: commentsRes.count || 0,
+      };
+    },
+  });
+};
 
 // ─── Poem Form ─────────────────────────────────────────────────────────────────
 interface PoemFormProps {
@@ -58,7 +78,7 @@ const PoemForm = ({ initial = EMPTY_FORM, onCancel, onSubmit, isPending, submitL
       if (data?.language) setLanguage(data.language);
       if (data?.style) setStyle(data.style);
     } catch {
-      // Silent fail — user can trigger manually
+      // Silent fail
     } finally {
       setAnalyzing(false);
     }
@@ -86,72 +106,42 @@ const PoemForm = ({ initial = EMPTY_FORM, onCancel, onSubmit, isPending, submitL
     <div className="space-y-4">
       <div>
         <label className="text-sm font-medium text-foreground">{t("portfolio_title_label")}</label>
-        <input
-          type="text"
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          placeholder={t("portfolio_title_placeholder")}
-          maxLength={200}
-          className="mt-1 w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground outline-none focus:ring-2 focus:ring-accent/30"
-        />
+        <input type="text" value={title} onChange={(e) => setTitle(e.target.value)}
+          placeholder={t("portfolio_title_placeholder")} maxLength={200}
+          className="mt-1 w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground outline-none focus:ring-2 focus:ring-accent/30" />
       </div>
 
       <div>
         <label className="text-sm font-medium text-foreground">{t("portfolio_content_label")}</label>
-        <textarea
-          rows={10}
-          value={content}
-          onChange={(e) => handleContentChange(e.target.value)}
-          placeholder={t("portfolio_content_placeholder")}
-          maxLength={10000}
-          className="mt-1 w-full resize-none rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground outline-none focus:ring-2 focus:ring-accent/30 font-body leading-relaxed"
-        />
+        <textarea rows={10} value={content} onChange={(e) => handleContentChange(e.target.value)}
+          placeholder={t("portfolio_content_placeholder")} maxLength={10000}
+          className="mt-1 w-full resize-none rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground outline-none focus:ring-2 focus:ring-accent/30 font-body leading-relaxed" />
         <div className="mt-1 flex items-center gap-2">
-          <button
-            type="button"
-            onClick={handleManualAnalyze}
-            disabled={analyzing || !content.trim()}
-            className="inline-flex items-center gap-1.5 rounded-md bg-accent/10 px-3 py-1.5 text-xs font-medium text-accent transition-colors hover:bg-accent/20 disabled:opacity-50"
-          >
-            {analyzing ? (
-              <><Loader2 className="h-3 w-3 animate-spin" /> {t("portfolio_analyzing")}</>
-            ) : (
-              <><Sparkles className="h-3 w-3" /> {t("portfolio_analyze")}</>
-            )}
+          <button type="button" onClick={handleManualAnalyze} disabled={analyzing || !content.trim()}
+            className="inline-flex items-center gap-1.5 rounded-md bg-accent/10 px-3 py-1.5 text-xs font-medium text-accent transition-colors hover:bg-accent/20 disabled:opacity-50">
+            {analyzing ? <><Loader2 className="h-3 w-3 animate-spin" /> {t("portfolio_analyzing")}</> : <><Sparkles className="h-3 w-3" /> {t("portfolio_analyze")}</>}
           </button>
-          {analyzing && (
-            <span className="text-xs text-muted-foreground">{t("portfolio_detecting")}</span>
-          )}
+          {analyzing && <span className="text-xs text-muted-foreground">{t("portfolio_detecting")}</span>}
         </div>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2">
         <div>
           <label className="text-sm font-medium text-foreground">{t("portfolio_language_label")}</label>
-          <select
-            value={language}
-            onChange={(e) => setLanguage(e.target.value)}
-            className="mt-1 w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:ring-2 focus:ring-accent/30"
-          >
+          <select value={language} onChange={(e) => setLanguage(e.target.value)}
+            className="mt-1 w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:ring-2 focus:ring-accent/30">
             {LANGUAGE_KEYS.map((lang) => (
-              <option key={lang} value={lang}>
-                {languageTranslations[lang]?.[locale] ?? lang}
-              </option>
+              <option key={lang} value={lang}>{languageTranslations[lang]?.[locale] ?? lang}</option>
             ))}
           </select>
         </div>
         <div>
           <label className="text-sm font-medium text-foreground">{t("portfolio_style_label")}</label>
-          <select
-            value={style}
-            onChange={(e) => setStyle(e.target.value)}
-            className="mt-1 w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:ring-2 focus:ring-accent/30"
-          >
+          <select value={style} onChange={(e) => setStyle(e.target.value)}
+            className="mt-1 w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:ring-2 focus:ring-accent/30">
             <option value="">{t("portfolio_style_placeholder")}</option>
             {STYLE_KEYS.map((s) => (
-              <option key={s} value={s}>
-                {styleTranslations[s]?.[locale] ?? s}
-              </option>
+              <option key={s} value={s}>{styleTranslations[s]?.[locale] ?? s}</option>
             ))}
           </select>
         </div>
@@ -159,29 +149,19 @@ const PoemForm = ({ initial = EMPTY_FORM, onCancel, onSubmit, isPending, submitL
 
       <div>
         <label className="text-sm font-medium text-foreground">{t("portfolio_tags_label")}</label>
-        <input
-          type="text"
-          value={tagsInput}
-          onChange={(e) => setTagsInput(e.target.value)}
-          placeholder={t("portfolio_tags_placeholder")}
-          maxLength={200}
-          className="mt-1 w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground outline-none focus:ring-2 focus:ring-accent/30"
-        />
+        <input type="text" value={tagsInput} onChange={(e) => setTagsInput(e.target.value)}
+          placeholder={t("portfolio_tags_placeholder")} maxLength={200}
+          className="mt-1 w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground outline-none focus:ring-2 focus:ring-accent/30" />
         <p className="mt-1 text-xs text-muted-foreground">{t("portfolio_tags_hint")}</p>
       </div>
 
       <div className="flex justify-end gap-2 pt-2">
-        <button
-          onClick={onCancel}
-          className="rounded-md border border-border px-4 py-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
-        >
+        <button onClick={onCancel}
+          className="rounded-md border border-border px-4 py-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground">
           {t("portfolio_cancel")}
         </button>
-        <button
-          onClick={handleSubmit}
-          disabled={isPending}
-          className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
-        >
+        <button onClick={handleSubmit} disabled={isPending}
+          className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50">
           {isPending ? pendingLabel : submitLabel}
         </button>
       </div>
@@ -199,6 +179,7 @@ interface MyPoemCardProps {
 const MyPoemCard = ({ poem, t, locale }: MyPoemCardProps) => {
   const updatePoem = useUpdatePoem();
   const deletePoem = useDeletePoem();
+  const { data: stats } = usePoemStats(poem.id);
   const [editing, setEditing] = useState(false);
   const [copied, setCopied] = useState(false);
 
@@ -209,9 +190,7 @@ const MyPoemCard = ({ poem, t, locale }: MyPoemCardProps) => {
       setCopied(true);
       toast.success(t("detail_link_copied"));
       setTimeout(() => setCopied(false), 2000);
-    } catch {
-      toast.error(t("detail_link_error"));
-    }
+    } catch { toast.error(t("detail_link_error")); }
   };
 
   const handleDelete = () => {
@@ -223,13 +202,10 @@ const MyPoemCard = ({ poem, t, locale }: MyPoemCardProps) => {
   };
 
   const handleUpdate = async (values: { title: string; content: string; tags: string[]; language: string; style: string }) => {
-    await updatePoem.mutateAsync(
-      { id: poem.id, ...values },
-      {
-        onSuccess: () => { toast.success(t("profile_updated")); setEditing(false); },
-        onError: (err: any) => toast.error(err.message),
-      }
-    );
+    await updatePoem.mutateAsync({ id: poem.id, ...values }, {
+      onSuccess: () => { toast.success(t("profile_updated")); setEditing(false); },
+      onError: (err: any) => toast.error(err.message),
+    });
   };
 
   return (
@@ -240,13 +216,7 @@ const MyPoemCard = ({ poem, t, locale }: MyPoemCardProps) => {
             {t("profile_edit")} — <span className="text-accent">{poem.title}</span>
           </h3>
           <PoemForm
-            initial={{
-              title: poem.title,
-              content: poem.content,
-              tagsInput: (poem.tags || []).join(", "),
-              language: poem.language || "English",
-              style: poem.style || "",
-            }}
+            initial={{ title: poem.title, content: poem.content, tagsInput: (poem.tags || []).join(", "), language: poem.language || "English", style: poem.style || "" }}
             onCancel={() => setEditing(false)}
             onSubmit={handleUpdate}
             isPending={updatePoem.isPending}
@@ -293,28 +263,36 @@ const MyPoemCard = ({ poem, t, locale }: MyPoemCardProps) => {
             </div>
           )}
 
-          <div className="mt-4 flex items-center justify-end gap-2 border-t border-border pt-3">
-            <button
-              onClick={handleShare}
-              className="flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
-            >
+          {/* Stats row */}
+          <div className="mt-3 flex items-center gap-4 text-xs text-muted-foreground border-t border-border pt-3">
+            <span className="flex items-center gap-1">
+              <Heart className="h-3.5 w-3.5 text-accent/60" />
+              {stats?.likes ?? 0}
+            </span>
+            <span className="flex items-center gap-1">
+              <Bookmark className="h-3.5 w-3.5 text-accent/60" />
+              {stats?.saves ?? 0}
+            </span>
+            <span className="flex items-center gap-1">
+              <MessageCircle className="h-3.5 w-3.5 text-accent/60" />
+              {stats?.comments ?? 0}
+            </span>
+          </div>
+
+          {/* Action buttons */}
+          <div className="mt-3 flex items-center justify-end gap-2 border-t border-border pt-3">
+            <button onClick={handleShare}
+              className="flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground">
               {copied ? <Check className="h-3.5 w-3.5 text-accent" /> : <Share2 className="h-3.5 w-3.5" />}
               {copied ? "✓" : t("detail_share")}
             </button>
-            <button
-              onClick={() => setEditing(true)}
-              className="flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
-            >
-              <Pencil className="h-3.5 w-3.5" />
-              {t("profile_edit")}
+            <button onClick={() => setEditing(true)}
+              className="flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground">
+              <Pencil className="h-3.5 w-3.5" />{t("profile_edit")}
             </button>
-            <button
-              onClick={handleDelete}
-              disabled={deletePoem.isPending}
-              className="flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium text-destructive/70 transition-colors hover:bg-destructive/10 hover:text-destructive disabled:opacity-50"
-            >
-              <Trash2 className="h-3.5 w-3.5" />
-              {t("detail_delete")}
+            <button onClick={handleDelete} disabled={deletePoem.isPending}
+              className="flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium text-destructive/70 transition-colors hover:bg-destructive/10 hover:text-destructive disabled:opacity-50">
+              <Trash2 className="h-3.5 w-3.5" />{t("detail_delete")}
             </button>
           </div>
         </div>
@@ -363,12 +341,9 @@ const Portfolio = () => {
             <Feather className="h-6 w-6 text-accent" />
             <h1 className="font-display text-3xl font-bold text-foreground">{t("portfolio_title")}</h1>
           </div>
-          <button
-            onClick={() => setShowForm(!showForm)}
-            className="inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
-          >
-            <Plus className="h-4 w-4" />
-            {t("portfolio_write")}
+          <button onClick={() => setShowForm(!showForm)}
+            className="inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90">
+            <Plus className="h-4 w-4" />{t("portfolio_write")}
           </button>
         </div>
         <p className="text-muted-foreground mb-8 max-w-lg">{t("portfolio_subtitle")}</p>
