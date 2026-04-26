@@ -4,16 +4,19 @@ import { useLikeCount, useUserLiked, useToggleLike, useSavedStatus, useToggleSav
 import { useCommentCount } from "@/hooks/useComments";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { tagTranslations, type Locale } from "@/i18n/translations";
 import { Link, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 
 interface PoemCardProps {
   poem: PoemWithAuthor;
+  locale?: Locale;
 }
 
-const PoemCard = ({ poem }: PoemCardProps) => {
+const PoemCard = ({ poem, locale: localeProp }: PoemCardProps) => {
   const { user } = useAuth();
-  const { t } = useLanguage();
+  const { t, locale: contextLocale } = useLanguage();
+  const locale = localeProp ?? contextLocale as Locale;
   const navigate = useNavigate();
   const { data: likeCount = 0 } = useLikeCount(poem.id);
   const { data: liked = false } = useUserLiked(poem.id);
@@ -33,6 +36,9 @@ const PoemCard = ({ poem }: PoemCardProps) => {
       onSuccess: () => toast.success(saved ? t("detail_removed_catalog") : t("detail_saved_catalog")),
     });
   };
+
+  const translateTag = (tag: string) =>
+    tagTranslations[tag]?.[locale] ?? tag.charAt(0).toUpperCase() + tag.slice(1);
 
   return (
     <article className="group rounded-lg border border-border bg-card p-5 transition-all hover:shadow-md hover:border-accent/40">
@@ -71,7 +77,7 @@ const PoemCard = ({ poem }: PoemCardProps) => {
       </p>
 
       <Link to={`/poem/${poem.id}`} className="block">
-        <pre className="mt-2 whitespace-pre-wrap font-body text-xs leading-relaxed text-foreground/80 line-clamp-4 max-w-prose overflow-x-hidden">
+        <pre className="mt-2 whitespace-pre font-body text-xs leading-relaxed text-foreground/80 line-clamp-4 max-w-prose overflow-x-hidden">
           {poem.excerpt || poem.content.split("\n").slice(0, 2).join("\n")}
         </pre>
       </Link>
@@ -82,7 +88,7 @@ const PoemCard = ({ poem }: PoemCardProps) => {
             key={tag}
             className="rounded-full bg-secondary px-2.5 py-0.5 text-xs font-medium text-muted-foreground"
           >
-            {tag.charAt(0).toUpperCase() + tag.slice(1)}
+            {translateTag(tag)}
           </span>
         ))}
       </div>
