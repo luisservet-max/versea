@@ -9,14 +9,17 @@ import { Link, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import {
   User, Save, Loader2, Feather, BookOpen, Heart,
-  Users, Eye, EyeOff, Shield, Settings, Pencil, Lock, UserPlus
+  Users, Eye, EyeOff, Shield, Settings, Pencil, Lock, UserPlus, X
 } from "lucide-react";
+
+type PanelType = "followers" | "following" | null;
 
 const Profile = () => {
   const { user, signOut } = useAuth();
   const { t } = useLanguage();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const [activePanel, setActivePanel] = useState<PanelType>(null);
 
   // Profile data
   const { data: profile, isLoading } = useQuery({
@@ -61,12 +64,11 @@ const Profile = () => {
     },
   });
 
-  // Followers list — two simple queries instead of a join
+  // Followers list
   const { data: followers = [] } = useQuery({
     queryKey: ["my-followers", user?.id],
-    enabled: !!user,
+    enabled: !!user && activePanel === "followers",
     queryFn: async () => {
-      // Step 1: get follower IDs
       const { data: followRows, error } = await supabase
         .from("follows")
         .select("follower_id")
@@ -74,18 +76,13 @@ const Profile = () => {
         .order("created_at", { ascending: false });
       if (error) throw error;
       if (!followRows || followRows.length === 0) return [];
-
       const followerIds = followRows.map((r: any) => r.follower_id);
-
-      // Step 2: get their profiles
       const { data: profileRows } = await supabase
         .from("profiles")
         .select("user_id, display_name, avatar_url")
         .in("user_id", followerIds);
-
       const profileMap: Record<string, any> = {};
       (profileRows || []).forEach((p: any) => { profileMap[p.user_id] = p; });
-
       return followerIds.map((id: string) => ({
         user_id: id,
         display_name: profileMap[id]?.display_name || "Poet",
@@ -94,8 +91,35 @@ const Profile = () => {
     },
   });
 
-  // Who I follow (to show follow-back state)
-  const { data: myFollowing = [] } = useQuery({
+  // Following list
+  const { data: following = [] } = useQuery({
+    queryKey: ["my-following-list", user?.id],
+    enabled: !!user && activePanel === "following",
+    queryFn: async () => {
+      const { data: followRows, error } = await supabase
+        .from("follows")
+        .select("following_id")
+        .eq("follower_id", user!.id)
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      if (!followRows || followRows.length === 0) return [];
+      const followingIds = followRows.map((r: any) => r.following_id);
+      const { data: profileRows } = await supabase
+        .from("profiles")
+        .select("user_id, display_name, avatar_url")
+        .in("user_id", followingIds);
+      const profileMap: Record<string, any> = {};
+      (profileRows || []).forEach((p: any) => { profileMap[p.user_id] = p; });
+      return followingIds.map((id: string) => ({
+        user_id: id,
+        display_name: profileMap[id]?.display_name || "Poet",
+        avatar_url: profileMap[id]?.avatar_url || null,
+      }));
+    },
+  });
+
+  // Who I follow (for follow-back state on followers panel)
+  const { data: myFollowingIds = [] } = useQuery({
     queryKey: ["my-following-ids", user?.id],
     enabled: !!user,
     queryFn: async () => {
@@ -107,7 +131,7 @@ const Profile = () => {
     },
   });
 
-  // Follow / unfollow a follower back
+  // Follow / unfollow
   const toggleFollow = useMutation({
     mutationFn: async ({ targetId, isFollowing }: { targetId: string; isFollowing: boolean }) => {
       if (isFollowing) {
@@ -123,6 +147,7 @@ const Profile = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["my-following-ids"] });
+      queryClient.invalidateQueries({ queryKey: ["my-following-list"] });
       queryClient.invalidateQueries({ queryKey: ["my-stats"] });
     },
     onError: (err: any) => toast.error(err.message),
@@ -133,8 +158,6 @@ const Profile = () => {
   const [displayName, setDisplayName] = useState("");
   const [bio, setBio] = useState("");
   const [avatarUrl, setAvatarUrl] = useState("");
-
-  // Password state
   const [showPasswordSection, setShowPasswordSection] = useState(false);
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -180,6 +203,10 @@ const Profile = () => {
     }
   };
 
+  const handleStatClick = (panel: PanelType) => {
+    setActivePanel(activePanel === panel ? null : panel);
+  };
+
   if (!user) {
     return (
       <div className="min-h-screen flex flex-col">
@@ -211,6 +238,10 @@ const Profile = () => {
   const avatarDisplay = (profile as any)?.avatar_url;
   const nameDisplay = (profile as any)?.display_name || user.email?.split("@")[0] || "Poet";
 
+  // The list to show in the panel
+  const panelList = activePanel === "followers" ? followers : following;
+  const panelTitle = activePanel === "followers" ? t("profile_followers") : t("profile_following");
+
   return (
     <div className="min-h-screen flex flex-col">
       <Header />
@@ -234,21 +265,115 @@ const Profile = () => {
           )}
         </div>
 
-        {/* Stats */}
-        <div className="grid grid-cols-4 gap-4 mb-8">
-          {[
-            { icon: Feather, label: t("profile_poems"), value: stats?.poems ?? 0 },
-            { icon: Heart, label: t("profile_likes"), value: stats?.likes ?? 0 },
-            { icon: Users, label: t("profile_followers"), value: stats?.followers ?? 0 },
-            { icon: Users, label: t("profile_following"), value: stats?.following ?? 0 },
-          ].map(({ icon: Icon, label, value }) => (
-            <div key={label} className="flex flex-col items-center rounded-lg border border-border bg-card p-3">
-              <Icon className="h-4 w-4 text-accent mb-1" />
-              <span className="text-lg font-bold text-foreground">{value}</span>
-              <span className="text-xs text-muted-foreground">{label}</span>
-            </div>
-          ))}
+        {/* Stats — followers and following are clickable */}
+        <div className="grid grid-cols-4 gap-4 mb-4">
+          {/* Poems */}
+          <div className="flex flex-col items-center rounded-lg border border-border bg-card p-3">
+            <Feather className="h-4 w-4 text-accent mb-1" />
+            <span className="text-lg font-bold text-foreground">{stats?.poems ?? 0}</span>
+            <span className="text-xs text-muted-foreground">{t("profile_poems")}</span>
+          </div>
+
+          {/* Likes */}
+          <div className="flex flex-col items-center rounded-lg border border-border bg-card p-3">
+            <Heart className="h-4 w-4 text-accent mb-1" />
+            <span className="text-lg font-bold text-foreground">{stats?.likes ?? 0}</span>
+            <span className="text-xs text-muted-foreground">{t("profile_likes")}</span>
+          </div>
+
+          {/* Followers — clickable */}
+          <button
+            onClick={() => handleStatClick("followers")}
+            className={`flex flex-col items-center rounded-lg border p-3 transition-colors ${
+              activePanel === "followers"
+                ? "border-accent bg-accent/10 text-accent"
+                : "border-border bg-card text-foreground hover:border-accent/50 hover:bg-accent/5"
+            }`}
+          >
+            <Users className="h-4 w-4 text-accent mb-1" />
+            <span className="text-lg font-bold">{stats?.followers ?? 0}</span>
+            <span className="text-xs text-muted-foreground">{t("profile_followers")}</span>
+          </button>
+
+          {/* Following — clickable */}
+          <button
+            onClick={() => handleStatClick("following")}
+            className={`flex flex-col items-center rounded-lg border p-3 transition-colors ${
+              activePanel === "following"
+                ? "border-accent bg-accent/10 text-accent"
+                : "border-border bg-card text-foreground hover:border-accent/50 hover:bg-accent/5"
+            }`}
+          >
+            <Users className="h-4 w-4 text-accent mb-1" />
+            <span className="text-lg font-bold">{stats?.following ?? 0}</span>
+            <span className="text-xs text-muted-foreground">{t("profile_following")}</span>
+          </button>
         </div>
+
+        {/* Expandable panel for followers / following */}
+        {activePanel && (
+          <div className="mb-6 animate-fade-in rounded-lg border border-accent/20 bg-card p-4">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="font-display text-sm font-semibold text-foreground">{panelTitle}</h3>
+              <button onClick={() => setActivePanel(null)} className="text-muted-foreground hover:text-foreground transition-colors">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            {panelList.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-4">
+                {activePanel === "followers" ? t("feed_no_following") : t("feed_no_following")}
+              </p>
+            ) : (
+              <div className="space-y-2.5">
+                {panelList.map((person: any) => {
+                  const isFollowingBack = myFollowingIds.includes(person.user_id);
+                  return (
+                    <div key={person.user_id} className="flex items-center justify-between gap-3">
+                      <Link
+                        to={`/author/${person.user_id}`}
+                        onClick={() => setActivePanel(null)}
+                        className="flex items-center gap-2.5 hover:opacity-80 transition-opacity min-w-0"
+                      >
+                        {person.avatar_url ? (
+                          <img src={person.avatar_url} alt={person.display_name}
+                            className="h-8 w-8 rounded-full object-cover border border-border shrink-0" />
+                        ) : (
+                          <div className="h-8 w-8 rounded-full bg-secondary flex items-center justify-center border border-border shrink-0">
+                            <User className="h-3.5 w-3.5 text-muted-foreground" />
+                          </div>
+                        )}
+                        <span className="text-sm font-medium text-foreground truncate">{person.display_name}</span>
+                      </Link>
+
+                      {/* For followers panel: show follow-back button */}
+                      {/* For following panel: show unfollow button */}
+                      <button
+                        onClick={() => toggleFollow.mutate({
+                          targetId: person.user_id,
+                          isFollowing: activePanel === "following" ? true : isFollowingBack,
+                        })}
+                        disabled={toggleFollow.isPending}
+                        className={`shrink-0 inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-medium transition-colors disabled:opacity-50 ${
+                          activePanel === "following" || isFollowingBack
+                            ? "bg-accent/10 text-accent hover:bg-accent/20"
+                            : "bg-secondary text-muted-foreground hover:text-foreground"
+                        }`}
+                      >
+                        <UserPlus className="h-3 w-3" />
+                        {activePanel === "following"
+                          ? t("find_unfollow")
+                          : isFollowingBack
+                          ? t("find_unfollow")
+                          : t("find_follow")}
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Quick links */}
         <div className="flex gap-3 mb-8 flex-wrap justify-center">
@@ -261,54 +386,6 @@ const Profile = () => {
           <Link to={`/author/${user.id}`} className="inline-flex items-center gap-2 rounded-md border border-border bg-card px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-secondary">
             <Eye className="h-4 w-4" />{t("profile_public_view")}
           </Link>
-        </div>
-
-        {/* Followers section */}
-        <div className="rounded-lg border border-border bg-card p-6 mb-6">
-          <h2 className="flex items-center gap-2 font-display text-lg font-semibold text-foreground mb-4">
-            <Users className="h-5 w-5 text-accent" />
-            {t("profile_followers")}
-            <span className="text-sm font-normal text-muted-foreground">({stats?.followers ?? 0})</span>
-          </h2>
-          {followers.length === 0 ? (
-            <p className="text-sm text-muted-foreground">{t("feed_no_following")}</p>
-          ) : (
-            <div className="space-y-3">
-              {followers.map((follower: any) => {
-                const isFollowingBack = myFollowing.includes(follower.user_id);
-                return (
-                  <div key={follower.user_id} className="flex items-center justify-between gap-3">
-                    <Link
-                      to={`/author/${follower.user_id}`}
-                      className="flex items-center gap-3 hover:opacity-80 transition-opacity min-w-0"
-                    >
-                      {follower.avatar_url ? (
-                        <img src={follower.avatar_url} alt={follower.display_name}
-                          className="h-9 w-9 rounded-full object-cover border border-border shrink-0" />
-                      ) : (
-                        <div className="h-9 w-9 rounded-full bg-secondary flex items-center justify-center border border-border shrink-0">
-                          <User className="h-4 w-4 text-muted-foreground" />
-                        </div>
-                      )}
-                      <span className="text-sm font-medium text-foreground truncate">{follower.display_name}</span>
-                    </Link>
-                    <button
-                      onClick={() => toggleFollow.mutate({ targetId: follower.user_id, isFollowing: isFollowingBack })}
-                      disabled={toggleFollow.isPending}
-                      className={`shrink-0 inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition-colors disabled:opacity-50 ${
-                        isFollowingBack
-                          ? "bg-accent/10 text-accent hover:bg-accent/20"
-                          : "bg-secondary text-muted-foreground hover:text-foreground hover:bg-secondary/80"
-                      }`}
-                    >
-                      <UserPlus className="h-3 w-3" />
-                      {isFollowingBack ? t("find_unfollow") : t("find_follow")}
-                    </button>
-                  </div>
-                );
-              })}
-            </div>
-          )}
         </div>
 
         {/* Edit profile */}
