@@ -1,39 +1,29 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-
+ 
 @layer base {
   :root {
     --background: 40 33% 96%;
     --foreground: 220 20% 14%;
-
     --card: 40 30% 98%;
     --card-foreground: 220 20% 14%;
-
     --popover: 40 30% 98%;
     --popover-foreground: 220 20% 14%;
-
     --primary: 220 20% 14%;
     --primary-foreground: 40 33% 96%;
-
     --secondary: 40 18% 90%;
     --secondary-foreground: 220 20% 14%;
-
     --muted: 40 14% 92%;
     --muted-foreground: 220 10% 46%;
-
     --accent: 43 60% 52%;
     --accent-foreground: 220 20% 14%;
-
     --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 100%;
-
     --border: 40 18% 87%;
     --input: 40 18% 87%;
     --ring: 43 60% 52%;
-
     --radius: 0.5rem;
-
     --gold: 43 60% 52%;
     --gold-light: 43 70% 72%;
     --sage: 150 12% 52%;
@@ -42,10 +32,8 @@
     --parchment: 40 33% 96%;
     --parchment-warm: 38 40% 92%;
     --cream: 40 30% 98%;
-
     --font-display: 'Playfair Display', Georgia, serif;
     --font-body: 'Source Sans 3', 'Segoe UI', sans-serif;
-
     --sidebar-background: 40 30% 98%;
     --sidebar-foreground: 220 20% 14%;
     --sidebar-primary: 220 20% 14%;
@@ -56,40 +44,42 @@
     --sidebar-ring: 43 60% 52%;
   }
 }
-
+ 
 @layer base {
+  html {
+    overflow-x: hidden;
+  }
+ 
   * {
     @apply border-border;
   }
-
+ 
   body {
     @apply bg-background text-foreground;
     font-family: var(--font-body);
+    overflow-x: hidden;
   }
-
+ 
   h1, h2, h3, h4, h5, h6 {
     font-family: var(--font-display);
   }
 }
-
+ 
 @layer utilities {
   .font-display {
     font-family: var(--font-display);
   }
-
   .font-body {
     font-family: var(--font-body);
   }
-
   .text-gold {
     color: hsl(var(--gold));
   }
-
   .bg-parchment-warm {
     background-color: hsl(var(--parchment-warm));
   }
-
   .text-sage {
     color: hsl(var(--sage));
   }
 }
+ 
