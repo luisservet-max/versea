@@ -4,7 +4,10 @@ import RelatedPoems from "@/components/RelatedPoems";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { usePoem, useDeletePoem } from "@/hooks/usePoems";
 import { useLikeCount, useUserLiked, useToggleLike, useSavedStatus, useToggleSave } from "@/hooks/useInteractions";
-import { useComments, useCommentCount, usePostComment } from "@/hooks/useComments";
+import {
+  useComments, useCommentCount, usePostComment,
+  useDeleteComment, useCommentLikeCount, useUserLikedComment, useToggleCommentLike
+} from "@/hooks/useComments";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { tagTranslations, type Locale } from "@/i18n/translations";
@@ -14,6 +17,67 @@ import { toast } from "sonner";
 import { formatDistanceToNow } from "date-fns";
 import { es as esLocale, fr as frLocale } from "date-fns/locale";
 
+// ─── Single comment row with like + delete ─────────────────────────────────────
+interface CommentRowProps {
+  c: { id: string; content: string; created_at: string; user_id: string; author_name: string };
+  currentUserId?: string;
+  poemId: string;
+  dateFnsLocale: any;
+  t: (key: string) => string;
+}
+
+const CommentRow = ({ c, currentUserId, poemId, dateFnsLocale, t }: CommentRowProps) => {
+  const { data: likeCount = 0 } = useCommentLikeCount(c.id);
+  const { data: liked = false } = useUserLikedComment(c.id);
+  const toggleLike = useToggleCommentLike(c.id);
+  const deleteComment = useDeleteComment(poemId);
+  const isOwner = currentUserId === c.user_id;
+
+  return (
+    <div className="rounded-xl border border-border bg-card p-4">
+      <div className="flex items-center justify-between mb-2">
+        <span className="text-sm font-medium text-foreground">{c.author_name}</span>
+        <span className="text-xs text-muted-foreground">
+          {formatDistanceToNow(new Date(c.created_at), { addSuffix: true, locale: dateFnsLocale })}
+        </span>
+      </div>
+      <p className="text-sm text-foreground/80 whitespace-pre-wrap">{c.content}</p>
+
+      {/* Like + delete row */}
+      <div className="mt-3 flex items-center gap-3">
+        <button
+          onClick={() => toggleLike.mutate(liked)}
+          disabled={!currentUserId || toggleLike.isPending}
+          className={`flex items-center gap-1 text-xs transition-colors disabled:opacity-40 ${
+            liked ? "text-accent" : "text-muted-foreground hover:text-accent"
+          }`}
+        >
+          <Heart className={`h-3.5 w-3.5 ${liked ? "fill-current" : ""}`} />
+          {likeCount > 0 && <span>{likeCount}</span>}
+        </button>
+
+        {isOwner && (
+          <button
+            onClick={() => {
+              if (!window.confirm(t("detail_delete_confirm"))) return;
+              deleteComment.mutate(c.id, {
+                onSuccess: () => toast.success(t("detail_deleted")),
+                onError: (err: any) => toast.error(err.message),
+              });
+            }}
+            disabled={deleteComment.isPending}
+            className="flex items-center gap-1 text-xs text-destructive/60 hover:text-destructive transition-colors disabled:opacity-40 ml-auto"
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+            {t("detail_delete")}
+          </button>
+        )}
+      </div>
+    </div>
+  );
+};
+
+// ─── Poem Detail Page ──────────────────────────────────────────────────────────
 const PoemDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -114,23 +178,15 @@ const PoemDetail = () => {
             </div>
             <div>
               {isAuthorLinked ? (
-                <Link
-                  to={`/author/${poem.user_id}`}
-                  className="text-sm font-medium text-foreground hover:text-accent transition-colors"
-                >
+                <Link to={`/author/${poem.user_id}`} className="text-sm font-medium text-foreground hover:text-accent transition-colors">
                   {poem.author_name}
                 </Link>
               ) : isClassicAuthor ? (
-                <Link
-                  to={`/classic-author/${encodeURIComponent(poem.author_name || "Unknown")}`}
-                  className="text-sm font-medium text-foreground hover:text-accent transition-colors"
-                >
+                <Link to={`/classic-author/${encodeURIComponent(poem.author_name || "Unknown")}`} className="text-sm font-medium text-foreground hover:text-accent transition-colors">
                   {poem.author_name}
                 </Link>
               ) : (
-                <span className="text-sm font-medium text-foreground">
-                  {poem.author_name}
-                </span>
+                <span className="text-sm font-medium text-foreground">{poem.author_name}</span>
               )}
               <div className="flex items-center gap-2">
                 {!poem.is_classic && (
@@ -151,10 +207,7 @@ const PoemDetail = () => {
 
           <div className="mt-4 flex flex-wrap gap-1.5">
             {(poem.tags || []).map((tag) => (
-              <span
-                key={tag}
-                className="rounded-full bg-secondary px-2.5 py-0.5 text-xs font-medium text-muted-foreground"
-              >
+              <span key={tag} className="rounded-full bg-secondary px-2.5 py-0.5 text-xs font-medium text-muted-foreground">
                 {translateTag(tag)}
               </span>
             ))}
@@ -172,9 +225,7 @@ const PoemDetail = () => {
             <button
               onClick={handleLike}
               className={`flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-medium transition-all ${
-                liked
-                  ? "bg-accent/10 text-accent shadow-sm"
-                  : "bg-secondary text-muted-foreground hover:text-foreground hover:bg-secondary/80"
+                liked ? "bg-accent/10 text-accent shadow-sm" : "bg-secondary text-muted-foreground hover:text-foreground hover:bg-secondary/80"
               }`}
             >
               <Heart className={`h-4 w-4 ${liked ? "fill-current" : ""}`} />
@@ -183,9 +234,7 @@ const PoemDetail = () => {
             <button
               onClick={handleSave}
               className={`flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-medium transition-all ${
-                saved
-                  ? "bg-accent/10 text-accent shadow-sm"
-                  : "bg-secondary text-muted-foreground hover:text-foreground hover:bg-secondary/80"
+                saved ? "bg-accent/10 text-accent shadow-sm" : "bg-secondary text-muted-foreground hover:text-foreground hover:bg-secondary/80"
               }`}
             >
               <Bookmark className={`h-4 w-4 ${saved ? "fill-current" : ""}`} />
@@ -203,10 +252,7 @@ const PoemDetail = () => {
                 onClick={() => {
                   if (window.confirm(t("detail_delete_confirm"))) {
                     deletePoem.mutate(poem.id, {
-                      onSuccess: () => {
-                        toast.success(t("detail_deleted"));
-                        navigate("/portfolio");
-                      },
+                      onSuccess: () => { toast.success(t("detail_deleted")); navigate("/portfolio"); },
                       onError: (err: any) => toast.error(err.message),
                     });
                   }
@@ -258,15 +304,14 @@ const PoemDetail = () => {
 
             <div className="mt-4 space-y-3">
               {comments.map((c) => (
-                <div key={c.id} className="rounded-xl border border-border bg-card p-4">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm font-medium text-foreground">{c.author_name}</span>
-                    <span className="text-xs text-muted-foreground">
-                      {formatDistanceToNow(new Date(c.created_at), { addSuffix: true, locale: dateFnsLocale })}
-                    </span>
-                  </div>
-                  <p className="text-sm text-foreground/80 whitespace-pre-wrap">{c.content}</p>
-                </div>
+                <CommentRow
+                  key={c.id}
+                  c={c}
+                  currentUserId={user?.id}
+                  poemId={id || ""}
+                  dateFnsLocale={dateFnsLocale}
+                  t={t}
+                />
               ))}
               {comments.length === 0 && (
                 <p className="text-center text-sm text-muted-foreground py-4">
@@ -277,11 +322,7 @@ const PoemDetail = () => {
           </section>
 
           {/* Related poems */}
-          <RelatedPoems
-            poemId={poem.id}
-            tags={poem.tags}
-            authorName={poem.author_name}
-          />
+          <RelatedPoems poemId={poem.id} tags={poem.tags} authorName={poem.author_name} />
         </article>
       </main>
       <Footer />
