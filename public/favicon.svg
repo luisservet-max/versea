@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <!-- Dark ink background -->
+  <rect width="32" height="32" rx="7" fill="#1e2433"/>
+  <!-- Left page — brighter gold -->
+  <path d="M7 7 C7 7 13 10 16 22 C13 18 8 17 8 17 Z" fill="#c9a84c"/>
+  <!-- Right page — slightly muted gold for depth -->
+  <path d="M25 7 C25 7 19 10 16 22 C19 18 24 17 24 17 Z" fill="#a8893d"/>
+  <!-- Subtle spine line -->
+  <line x1="16" y1="22" x2="16" y2="8" stroke="#e8c870" stroke-width="0.6" stroke-linecap="round" opacity="0.4"/>
+</svg>
