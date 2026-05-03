@@ -7,7 +7,6 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { languageTranslations, styleTranslations, type Locale } from "@/i18n/translations";
 import { supabase } from "@/integrations/supabase/client";
 import { useState, useRef, useEffect, useCallback } from "react";
-import { useSearchParams } from "react-router-dom";
 import { Feather, Search, Loader2, Library, Users, Globe, Sparkles, ChevronDown, X, User, BookOpen, Flame } from "lucide-react";
 import { Link } from "react-router-dom";
 
@@ -116,33 +115,15 @@ const FilterDropdown = ({
 
 const Index = () => {
   const { t, locale } = useLanguage();
-  const [searchParams, setSearchParams] = useSearchParams();
 
-  const [activeStyle, setActiveStyleState] = useState<string | null>(searchParams.get("style"));
-  const [searchQuery, setSearchQuery] = useState(searchParams.get("q") || "");
-  const [committedSearch, setCommittedSearch] = useState(searchParams.get("q") || "");
-  const [source, setSourceState] = useState<SourceFilter>((searchParams.get("source") as SourceFilter) || "all");
-  const [language, setLanguageState] = useState<string | null>(searchParams.get("lang"));
+  // Simple local state — no URL params to avoid React batching issues
+  const [source, setSource] = useState<SourceFilter>("all");
+  const [language, setLanguage] = useState<string | null>(null);
+  const [activeStyle, setActiveStyle] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [committedSearch, setCommittedSearch] = useState("");
 
-  const setActiveStyle = (val: string | null) => {
-    setActiveStyleState(val);
-    setSearchParams(prev => { const n = new URLSearchParams(prev); val ? n.set("style", val) : n.delete("style"); return n; }, { replace: true });
-  };
-  const setSource = (val: SourceFilter) => {
-    setSourceState(val);
-    setSearchParams(prev => { const n = new URLSearchParams(prev); val !== "all" ? n.set("source", val) : n.delete("source"); return n; }, { replace: true });
-  };
-  const setLanguage = (val: string | null) => {
-    setLanguageState(val);
-    setSearchParams(prev => { const n = new URLSearchParams(prev); val ? n.set("lang", val) : n.delete("lang"); return n; }, { replace: true });
-  };
-  const commitSearch = (val: string) => {
-    setCommittedSearch(val);
-    setShowSuggestions(false);
-    setSearchParams(prev => { const n = new URLSearchParams(prev); val ? n.set("q", val) : n.delete("q"); return n; }, { replace: true });
-  };
-
-  const [suggestions, setSuggestions] = useState<{ type: "poem" | "author" | "classic_author"; id: string; label: string; sub?: string }[]>([]);
+  const [suggestions, setSuggestions] = useState<{ type: "poem" | "author" | "classic_author"; id: string; label: string }[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [sugLoading, setSugLoading] = useState(false);
   const searchRef = useRef<HTMLDivElement>(null);
@@ -163,14 +144,14 @@ const Index = () => {
     setSugLoading(true);
     const term = `%${q}%`;
     const [authorsRes, classicRes] = await Promise.all([
-      supabase.from("profiles").select("user_id, display_name").ilike("display_name", term).limit(10),
-      supabase.from("classic_authors").select("id, name").ilike("name", term).limit(10),
+      supabase.from("profiles").select("user_id, display_name").ilike("display_name", term).limit(5),
+      supabase.from("classic_authors").select("id, name").ilike("name", term).limit(5),
     ]);
     const nq = normalize(q);
     const items: typeof suggestions = [];
-    (authorsRes.data || []).filter((a: any) => normalize(a.display_name || "").includes(nq)).slice(0, 5)
+    (authorsRes.data || []).filter((a: any) => normalize(a.display_name || "").includes(nq))
       .forEach((a: any) => items.push({ type: "author", id: a.user_id, label: a.display_name || "Anonymous" }));
-    (classicRes.data || []).filter((c: any) => normalize(c.name).includes(nq)).slice(0, 5)
+    (classicRes.data || []).filter((c: any) => normalize(c.name).includes(nq))
       .forEach((c: any) => items.push({ type: "classic_author", id: c.name, label: c.name }));
     setSuggestions(items);
     setSugLoading(false);
@@ -183,18 +164,18 @@ const Index = () => {
     setShowSuggestions(true);
   };
 
+  const commitSearch = (val: string) => {
+    setCommittedSearch(val);
+    setShowSuggestions(false);
+  };
+
   const { data: availableLanguages = [] } = useAvailableLanguages();
   const { data: availableStyles = [] } = useAvailableStyles();
 
   const translatedLanguages = availableLanguages.map((l) => languageTranslations[l]?.[locale as Locale] ?? l);
   const translatedStyles = availableStyles.map((s) => styleTranslations[s]?.[locale as Locale] ?? s);
 
-  // Pass active filters to trending so it shows top 6 matching poems
-  const { data: hotPoems = [], isLoading: hotLoading } = useHotPoems({
-    source,
-    language,
-    style: activeStyle,
-  });
+  const { data: hotPoems = [], isLoading: hotLoading } = useHotPoems({ source, language, style: activeStyle });
 
   const { data, isLoading, fetchNextPage, hasNextPage, isFetchingNextPage } = usePoems({
     search: committedSearch || undefined,
@@ -204,7 +185,7 @@ const Index = () => {
   });
 
   const poems = data?.pages.flat() ?? [];
-  const showHot = !committedSearch; // only hide trending when user is searching text
+  const showHot = !committedSearch;
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -250,15 +231,14 @@ const Index = () => {
                   </div>
                 ) : (
                   suggestions.map((s, i) => {
-                    const href = s.type === "poem" ? `/poem/${s.id}` : s.type === "author" ? `/author/${s.id}` : `/classic-author/${encodeURIComponent(s.id)}`;
-                    const Icon = s.type === "poem" ? BookOpen : User;
+                    const href = s.type === "author" ? `/author/${s.id}` : `/classic-author/${encodeURIComponent(s.id)}`;
+                    const Icon = s.type === "author" ? User : BookOpen;
                     return (
                       <Link key={`${s.type}-${s.id}-${i}`} to={href} onClick={() => setShowSuggestions(false)}
                         className="flex items-center gap-3 px-4 py-2.5 text-sm transition-colors hover:bg-secondary">
                         <Icon className="h-4 w-4 shrink-0 text-muted-foreground" />
                         <div className="min-w-0">
                           <span className="font-medium text-foreground">{s.label}</span>
-                          {s.sub && <span className="ml-1.5 text-xs text-muted-foreground">{t("by")} {s.sub}</span>}
                           <span className="ml-1.5 text-[10px] text-accent/70 uppercase">
                             {s.type === "classic_author" ? t("filter_classic") : t("filter_community")}
                           </span>
@@ -278,22 +258,32 @@ const Index = () => {
       {/* Filter bar */}
       <section className="border-b border-border bg-card">
         <div className="container py-4 flex flex-wrap items-center gap-2">
-          {([
-            { key: "all" as SourceFilter, label: t("filter_all"), icon: null },
-            { key: "classic" as SourceFilter, label: t("filter_classic"), icon: Library },
-            { key: "community" as SourceFilter, label: t("filter_community"), icon: Users },
-          ]).map(({ key, label, icon: Icon }) => (
-            <button
-              key={key}
-              onClick={() => setSource(key)}
-              className={`flex items-center gap-1.5 shrink-0 rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
-                source === key ? "bg-accent text-accent-foreground" : "bg-secondary text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              {Icon && <Icon className="h-3 w-3" />}
-              {label}
-            </button>
-          ))}
+          <button
+            onClick={() => setSource("all")}
+            className={`flex items-center gap-1.5 shrink-0 rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
+              source === "all" ? "bg-accent text-accent-foreground" : "bg-secondary text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            {t("filter_all")}
+          </button>
+          <button
+            onClick={() => setSource("classic")}
+            className={`flex items-center gap-1.5 shrink-0 rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
+              source === "classic" ? "bg-accent text-accent-foreground" : "bg-secondary text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <Library className="h-3 w-3" />
+            {t("filter_classic")}
+          </button>
+          <button
+            onClick={() => setSource("community")}
+            className={`flex items-center gap-1.5 shrink-0 rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
+              source === "community" ? "bg-accent text-accent-foreground" : "bg-secondary text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <Users className="h-3 w-3" />
+            {t("filter_community")}
+          </button>
 
           <div className="w-px h-6 bg-border mx-1" />
 
@@ -322,7 +312,7 @@ const Index = () => {
       </section>
 
       <main className="container flex-1 py-10">
-        {/* Trending — shows top 6 by likes in past 30 days, respects all active filters */}
+        {/* Trending */}
         {showHot && (
           <div className="mb-12">
             <h2 className="font-display text-2xl font-semibold text-foreground mb-6 flex items-center gap-2">
@@ -350,9 +340,9 @@ const Index = () => {
 
         {/* All poems */}
         <h2 className="font-display text-2xl font-semibold text-foreground mb-6">
-          {activeStyle ? (
-            <>{t("featured_poems")} — <span className="text-accent italic">{styleTranslations[activeStyle]?.[locale as Locale] ?? activeStyle}</span></>
-          ) : t("featured_poems")}
+          {activeStyle
+            ? <>{t("featured_poems")} — <span className="text-accent italic">{styleTranslations[activeStyle]?.[locale as Locale] ?? activeStyle}</span></>
+            : t("featured_poems")}
         </h2>
 
         {isLoading ? (
