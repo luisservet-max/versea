@@ -4,12 +4,12 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import {
   User, Save, Loader2, Feather, BookOpen, Heart,
-  Users, Eye, EyeOff, Shield, Settings, Pencil, Lock, UserPlus, X
+  Users, Eye, EyeOff, Shield, Settings, Pencil, Lock, UserPlus, X, Camera
 } from "lucide-react";
 
 type PanelType = "followers" | "following" | null;
@@ -20,23 +20,19 @@ const Profile = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [activePanel, setActivePanel] = useState<PanelType>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
 
-  // Profile data
   const { data: profile, isLoading } = useQuery({
     queryKey: ["my-profile", user?.id],
     enabled: !!user,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("*")
-        .eq("user_id", user!.id)
-        .maybeSingle();
+      const { data, error } = await supabase.from("profiles").select("*").eq("user_id", user!.id).maybeSingle();
       if (error) throw error;
       return data;
     },
   });
 
-  // Stats
   const { data: stats } = useQuery({
     queryKey: ["my-stats", user?.id],
     enabled: !!user,
@@ -49,100 +45,58 @@ const Profile = () => {
       const { data: userPoems } = await supabase.from("poems").select("id").eq("user_id", user!.id);
       let totalLikes = 0;
       if (userPoems && userPoems.length > 0) {
-        const { count } = await supabase
-          .from("likes")
-          .select("*", { count: "exact", head: true })
-          .in("poem_id", userPoems.map((p) => p.id));
+        const { count } = await supabase.from("likes").select("*", { count: "exact", head: true }).in("poem_id", userPoems.map((p) => p.id));
         totalLikes = count || 0;
       }
-      return {
-        poems: poemsRes.count || 0,
-        followers: followersRes.count || 0,
-        following: followingRes.count || 0,
-        likes: totalLikes,
-      };
+      return { poems: poemsRes.count || 0, followers: followersRes.count || 0, following: followingRes.count || 0, likes: totalLikes };
     },
   });
 
-  // Followers list
   const { data: followers = [] } = useQuery({
     queryKey: ["my-followers", user?.id],
     enabled: !!user && activePanel === "followers",
     queryFn: async () => {
-      const { data: followRows, error } = await supabase
-        .from("follows")
-        .select("follower_id")
-        .eq("following_id", user!.id)
-        .order("created_at", { ascending: false });
+      const { data: followRows, error } = await supabase.from("follows").select("follower_id").eq("following_id", user!.id).order("created_at", { ascending: false });
       if (error) throw error;
       if (!followRows || followRows.length === 0) return [];
-      const followerIds = followRows.map((r: any) => r.follower_id);
-      const { data: profileRows } = await supabase
-        .from("profiles")
-        .select("user_id, display_name, avatar_url")
-        .in("user_id", followerIds);
-      const profileMap: Record<string, any> = {};
-      (profileRows || []).forEach((p: any) => { profileMap[p.user_id] = p; });
-      return followerIds.map((id: string) => ({
-        user_id: id,
-        display_name: profileMap[id]?.display_name || "Poet",
-        avatar_url: profileMap[id]?.avatar_url || null,
-      }));
+      const ids = followRows.map((r: any) => r.follower_id);
+      const { data: profileRows } = await supabase.from("profiles").select("user_id, display_name, avatar_url").in("user_id", ids);
+      const map: Record<string, any> = {};
+      (profileRows || []).forEach((p: any) => { map[p.user_id] = p; });
+      return ids.map((id: string) => ({ user_id: id, display_name: map[id]?.display_name || "Poet", avatar_url: map[id]?.avatar_url || null }));
     },
   });
 
-  // Following list
   const { data: following = [] } = useQuery({
     queryKey: ["my-following-list", user?.id],
     enabled: !!user && activePanel === "following",
     queryFn: async () => {
-      const { data: followRows, error } = await supabase
-        .from("follows")
-        .select("following_id")
-        .eq("follower_id", user!.id)
-        .order("created_at", { ascending: false });
+      const { data: followRows, error } = await supabase.from("follows").select("following_id").eq("follower_id", user!.id).order("created_at", { ascending: false });
       if (error) throw error;
       if (!followRows || followRows.length === 0) return [];
-      const followingIds = followRows.map((r: any) => r.following_id);
-      const { data: profileRows } = await supabase
-        .from("profiles")
-        .select("user_id, display_name, avatar_url")
-        .in("user_id", followingIds);
-      const profileMap: Record<string, any> = {};
-      (profileRows || []).forEach((p: any) => { profileMap[p.user_id] = p; });
-      return followingIds.map((id: string) => ({
-        user_id: id,
-        display_name: profileMap[id]?.display_name || "Poet",
-        avatar_url: profileMap[id]?.avatar_url || null,
-      }));
+      const ids = followRows.map((r: any) => r.following_id);
+      const { data: profileRows } = await supabase.from("profiles").select("user_id, display_name, avatar_url").in("user_id", ids);
+      const map: Record<string, any> = {};
+      (profileRows || []).forEach((p: any) => { map[p.user_id] = p; });
+      return ids.map((id: string) => ({ user_id: id, display_name: map[id]?.display_name || "Poet", avatar_url: map[id]?.avatar_url || null }));
     },
   });
 
-  // Who I follow (for follow-back state on followers panel)
   const { data: myFollowingIds = [] } = useQuery({
     queryKey: ["my-following-ids", user?.id],
     enabled: !!user,
     queryFn: async () => {
-      const { data } = await supabase
-        .from("follows")
-        .select("following_id")
-        .eq("follower_id", user!.id);
+      const { data } = await supabase.from("follows").select("following_id").eq("follower_id", user!.id);
       return (data || []).map((r: any) => r.following_id);
     },
   });
 
-  // Follow / unfollow
   const toggleFollow = useMutation({
     mutationFn: async ({ targetId, isFollowing }: { targetId: string; isFollowing: boolean }) => {
       if (isFollowing) {
-        await supabase.from("follows").delete()
-          .eq("follower_id", user!.id)
-          .eq("following_id", targetId);
+        await supabase.from("follows").delete().eq("follower_id", user!.id).eq("following_id", targetId);
       } else {
-        await supabase.from("follows").insert({
-          follower_id: user!.id,
-          following_id: targetId,
-        });
+        await supabase.from("follows").insert({ follower_id: user!.id, following_id: targetId });
       }
     },
     onSuccess: () => {
@@ -153,7 +107,6 @@ const Profile = () => {
     onError: (err: any) => toast.error(err.message),
   });
 
-  // Edit state
   const [editing, setEditing] = useState(false);
   const [displayName, setDisplayName] = useState("");
   const [bio, setBio] = useState("");
@@ -171,16 +124,41 @@ const Profile = () => {
     }
   }, [profile]);
 
+  // Photo upload handler
+  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !user) return;
+    if (file.size > 5 * 1024 * 1024) { toast.error("Photo must be under 5MB"); return; }
+
+    setUploadingPhoto(true);
+    try {
+      const ext = file.name.split(".").pop();
+      const path = `${user.id}/avatar.${ext}`;
+      const { error: uploadError } = await supabase.storage.from("avatars").upload(path, file, { upsert: true });
+      if (uploadError) throw uploadError;
+
+      const { data: urlData } = supabase.storage.from("avatars").getPublicUrl(path);
+      const publicUrl = urlData.publicUrl + `?t=${Date.now()}`; // cache bust
+
+      const { error: updateError } = await supabase.from("profiles").update({ avatar_url: publicUrl }).eq("user_id", user.id);
+      if (updateError) throw updateError;
+
+      queryClient.invalidateQueries({ queryKey: ["my-profile"] });
+      toast.success("Photo updated!");
+    } catch (err: any) {
+      toast.error(err.message || "Upload failed");
+    } finally {
+      setUploadingPhoto(false);
+    }
+  };
+
   const updateProfile = useMutation({
     mutationFn: async () => {
-      const { error } = await supabase
-        .from("profiles")
-        .update({
-          display_name: displayName.trim() || null,
-          bio: bio.trim() || null,
-          avatar_url: avatarUrl.trim() || null,
-        })
-        .eq("user_id", user!.id);
+      const { error } = await supabase.from("profiles").update({
+        display_name: displayName.trim() || null,
+        bio: bio.trim() || null,
+        avatar_url: avatarUrl.trim() || null,
+      }).eq("user_id", user!.id);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -195,16 +173,10 @@ const Profile = () => {
     if (newPassword.length < 6) { toast.error(t("profile_password_min")); return; }
     if (newPassword !== confirmPassword) { toast.error(t("profile_password_mismatch")); return; }
     const { error } = await supabase.auth.updateUser({ password: newPassword });
-    if (error) {
-      toast.error(error.message);
-    } else {
+    if (error) { toast.error(error.message); } else {
       toast.success(t("profile_password_changed"));
       setNewPassword(""); setConfirmPassword(""); setShowPasswordSection(false);
     }
-  };
-
-  const handleStatClick = (panel: PanelType) => {
-    setActivePanel(activePanel === panel ? null : panel);
   };
 
   if (!user) {
@@ -214,9 +186,7 @@ const Profile = () => {
         <main className="container flex-1 flex flex-col items-center justify-center py-20 text-center">
           <User className="h-12 w-12 text-muted-foreground/30 mb-4" />
           <p className="text-muted-foreground mb-4">{t("profile_sign_in_prompt")}</p>
-          <Link to="/auth" className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90">
-            {t("nav_sign_in")}
-          </Link>
+          <Link to="/auth" className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90">{t("nav_sign_in")}</Link>
         </main>
         <Footer />
       </div>
@@ -237,8 +207,6 @@ const Profile = () => {
 
   const avatarDisplay = (profile as any)?.avatar_url;
   const nameDisplay = (profile as any)?.display_name || user.email?.split("@")[0] || "Poet";
-
-  // The list to show in the panel
   const panelList = activePanel === "followers" ? followers : following;
   const panelTitle = activePanel === "followers" ? t("profile_followers") : t("profile_following");
 
@@ -249,7 +217,8 @@ const Profile = () => {
 
         {/* Profile header */}
         <div className="flex flex-col items-center text-center mb-8">
-          <div className="relative mb-4">
+          {/* Avatar with upload button */}
+          <div className="relative mb-4 group">
             {avatarDisplay ? (
               <img src={avatarDisplay} alt={nameDisplay} className="h-24 w-24 rounded-full object-cover border-2 border-border" />
             ) : (
@@ -257,60 +226,74 @@ const Profile = () => {
                 <User className="h-10 w-10 text-muted-foreground" />
               </div>
             )}
+            {/* Upload overlay */}
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              disabled={uploadingPhoto}
+              className="absolute inset-0 rounded-full flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity"
+            >
+              {uploadingPhoto
+                ? <Loader2 className="h-6 w-6 text-white animate-spin" />
+                : <Camera className="h-6 w-6 text-white" />
+              }
+            </button>
+            <input ref={fileInputRef} type="file" accept="image/jpeg,image/png,image/webp,image/gif" className="hidden" onChange={handlePhotoUpload} />
           </div>
-          <h1 className="font-display text-2xl font-bold text-foreground">{nameDisplay}</h1>
+
+          {/* Inline name editing */}
+          {editing ? (
+            <input
+              value={displayName}
+              onChange={(e) => setDisplayName(e.target.value)}
+              className="font-display text-2xl font-bold text-center text-foreground border-b-2 border-accent bg-transparent outline-none pb-1 mb-1"
+              placeholder="Your name"
+            />
+          ) : (
+            <div className="flex items-center gap-2">
+              <h1 className="font-display text-2xl font-bold text-foreground">{nameDisplay}</h1>
+              <button onClick={() => setEditing(true)} className="text-muted-foreground hover:text-accent transition-colors">
+                <Pencil className="h-4 w-4" />
+              </button>
+            </div>
+          )}
           <p className="text-sm text-muted-foreground mt-1">{user.email}</p>
           {(profile as any)?.bio && !editing && (
             <p className="mt-3 text-sm text-muted-foreground max-w-md">{(profile as any).bio}</p>
           )}
+          <p className="mt-2 text-xs text-muted-foreground">Tap photo to change it</p>
         </div>
 
-        {/* Stats — followers and following are clickable */}
+        {/* Stats */}
         <div className="grid grid-cols-4 gap-4 mb-4">
-          {/* Poems */}
           <div className="flex flex-col items-center rounded-lg border border-border bg-card p-3">
             <Feather className="h-4 w-4 text-accent mb-1" />
             <span className="text-lg font-bold text-foreground">{stats?.poems ?? 0}</span>
             <span className="text-xs text-muted-foreground">{t("profile_poems")}</span>
           </div>
-
-          {/* Likes */}
           <div className="flex flex-col items-center rounded-lg border border-border bg-card p-3">
             <Heart className="h-4 w-4 text-accent mb-1" />
             <span className="text-lg font-bold text-foreground">{stats?.likes ?? 0}</span>
             <span className="text-xs text-muted-foreground">{t("profile_likes")}</span>
           </div>
-
-          {/* Followers — clickable */}
           <button
-            onClick={() => handleStatClick("followers")}
-            className={`flex flex-col items-center rounded-lg border p-3 transition-colors ${
-              activePanel === "followers"
-                ? "border-accent bg-accent/10 text-accent"
-                : "border-border bg-card text-foreground hover:border-accent/50 hover:bg-accent/5"
-            }`}
+            onClick={() => setActivePanel(activePanel === "followers" ? null : "followers")}
+            className={`flex flex-col items-center rounded-lg border p-3 transition-colors ${activePanel === "followers" ? "border-accent bg-accent/10" : "border-border bg-card hover:border-accent/50 hover:bg-accent/5"}`}
           >
             <Users className="h-4 w-4 text-accent mb-1" />
-            <span className="text-lg font-bold">{stats?.followers ?? 0}</span>
+            <span className="text-lg font-bold text-foreground">{stats?.followers ?? 0}</span>
             <span className="text-xs text-muted-foreground">{t("profile_followers")}</span>
           </button>
-
-          {/* Following — clickable */}
           <button
-            onClick={() => handleStatClick("following")}
-            className={`flex flex-col items-center rounded-lg border p-3 transition-colors ${
-              activePanel === "following"
-                ? "border-accent bg-accent/10 text-accent"
-                : "border-border bg-card text-foreground hover:border-accent/50 hover:bg-accent/5"
-            }`}
+            onClick={() => setActivePanel(activePanel === "following" ? null : "following")}
+            className={`flex flex-col items-center rounded-lg border p-3 transition-colors ${activePanel === "following" ? "border-accent bg-accent/10" : "border-border bg-card hover:border-accent/50 hover:bg-accent/5"}`}
           >
             <Users className="h-4 w-4 text-accent mb-1" />
-            <span className="text-lg font-bold">{stats?.following ?? 0}</span>
+            <span className="text-lg font-bold text-foreground">{stats?.following ?? 0}</span>
             <span className="text-xs text-muted-foreground">{t("profile_following")}</span>
           </button>
         </div>
 
-        {/* Expandable panel for followers / following */}
+        {/* Followers / Following panel */}
         {activePanel && (
           <div className="mb-6 animate-fade-in rounded-lg border border-accent/20 bg-card p-4">
             <div className="flex items-center justify-between mb-3">
@@ -319,25 +302,17 @@ const Profile = () => {
                 <X className="h-4 w-4" />
               </button>
             </div>
-
             {panelList.length === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-4">
-                {activePanel === "followers" ? t("feed_no_following") : t("feed_no_following")}
-              </p>
+              <p className="text-sm text-muted-foreground text-center py-4">{t("feed_no_following")}</p>
             ) : (
               <div className="space-y-2.5">
                 {panelList.map((person: any) => {
                   const isFollowingBack = myFollowingIds.includes(person.user_id);
                   return (
                     <div key={person.user_id} className="flex items-center justify-between gap-3">
-                      <Link
-                        to={`/author/${person.user_id}`}
-                        onClick={() => setActivePanel(null)}
-                        className="flex items-center gap-2.5 hover:opacity-80 transition-opacity min-w-0"
-                      >
+                      <Link to={`/author/${person.user_id}`} onClick={() => setActivePanel(null)} className="flex items-center gap-2.5 hover:opacity-80 transition-opacity min-w-0">
                         {person.avatar_url ? (
-                          <img src={person.avatar_url} alt={person.display_name}
-                            className="h-8 w-8 rounded-full object-cover border border-border shrink-0" />
+                          <img src={person.avatar_url} alt={person.display_name} className="h-8 w-8 rounded-full object-cover border border-border shrink-0" />
                         ) : (
                           <div className="h-8 w-8 rounded-full bg-secondary flex items-center justify-center border border-border shrink-0">
                             <User className="h-3.5 w-3.5 text-muted-foreground" />
@@ -345,27 +320,13 @@ const Profile = () => {
                         )}
                         <span className="text-sm font-medium text-foreground truncate">{person.display_name}</span>
                       </Link>
-
-                      {/* For followers panel: show follow-back button */}
-                      {/* For following panel: show unfollow button */}
                       <button
-                        onClick={() => toggleFollow.mutate({
-                          targetId: person.user_id,
-                          isFollowing: activePanel === "following" ? true : isFollowingBack,
-                        })}
+                        onClick={() => toggleFollow.mutate({ targetId: person.user_id, isFollowing: activePanel === "following" ? true : isFollowingBack })}
                         disabled={toggleFollow.isPending}
-                        className={`shrink-0 inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-medium transition-colors disabled:opacity-50 ${
-                          activePanel === "following" || isFollowingBack
-                            ? "bg-accent/10 text-accent hover:bg-accent/20"
-                            : "bg-secondary text-muted-foreground hover:text-foreground"
-                        }`}
+                        className={`shrink-0 inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-medium transition-colors disabled:opacity-50 ${activePanel === "following" || isFollowingBack ? "bg-accent/10 text-accent hover:bg-accent/20" : "bg-secondary text-muted-foreground hover:text-foreground"}`}
                       >
                         <UserPlus className="h-3 w-3" />
-                        {activePanel === "following"
-                          ? t("find_unfollow")
-                          : isFollowingBack
-                          ? t("find_unfollow")
-                          : t("find_follow")}
+                        {activePanel === "following" ? t("find_unfollow") : isFollowingBack ? t("find_unfollow") : t("find_follow")}
                       </button>
                     </div>
                   );
@@ -392,12 +353,10 @@ const Profile = () => {
         <div className="rounded-lg border border-border bg-card p-6 mb-6">
           <div className="flex items-center justify-between mb-4">
             <h2 className="flex items-center gap-2 font-display text-lg font-semibold text-foreground">
-              <Settings className="h-5 w-5 text-accent" />
-              {t("profile_edit_title")}
+              <Settings className="h-5 w-5 text-accent" />{t("profile_edit_title")}
             </h2>
             {!editing && (
-              <button onClick={() => setEditing(true)}
-                className="inline-flex items-center gap-1.5 rounded-md bg-secondary px-3 py-1.5 text-sm font-medium text-foreground transition-colors hover:bg-secondary/80">
+              <button onClick={() => setEditing(true)} className="inline-flex items-center gap-1.5 rounded-md bg-secondary px-3 py-1.5 text-sm font-medium text-foreground transition-colors hover:bg-secondary/80">
                 <Pencil className="h-3.5 w-3.5" />{t("profile_edit")}
               </button>
             )}
@@ -414,14 +373,8 @@ const Profile = () => {
                 <textarea rows={3} value={bio} onChange={(e) => setBio(e.target.value)}
                   className="mt-1 w-full resize-none rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:ring-2 focus:ring-accent/30" />
               </div>
-              <div>
-                <label className="text-sm font-medium text-foreground">{t("profile_avatar_url")}</label>
-                <input value={avatarUrl} onChange={(e) => setAvatarUrl(e.target.value)} placeholder="https://..."
-                  className="mt-1 w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:ring-2 focus:ring-accent/30" />
-              </div>
               <div className="flex justify-end gap-2">
-                <button onClick={() => setEditing(false)}
-                  className="rounded-md border border-border px-4 py-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground">
+                <button onClick={() => setEditing(false)} className="rounded-md border border-border px-4 py-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground">
                   {t("portfolio_cancel")}
                 </button>
                 <button onClick={() => updateProfile.mutate()} disabled={updateProfile.isPending}
@@ -464,8 +417,7 @@ const Profile = () => {
                 <div className="relative mt-1">
                   <input type={showPassword ? "text" : "password"} value={newPassword} onChange={(e) => setNewPassword(e.target.value)}
                     className="w-full rounded-md border border-border bg-background px-3 py-2 pr-10 text-sm text-foreground outline-none focus:ring-2 focus:ring-accent/30" />
-                  <button type="button" onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
+                  <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
                     {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>
                 </div>
@@ -475,8 +427,7 @@ const Profile = () => {
                 <input type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)}
                   className="mt-1 w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:ring-2 focus:ring-accent/30" />
               </div>
-              <button onClick={changePassword}
-                className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90">
+              <button onClick={changePassword} className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90">
                 {t("profile_change_password")}
               </button>
             </div>
