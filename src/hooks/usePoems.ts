@@ -40,6 +40,18 @@ function mapPoem(row: any): PoemWithAuthor {
 
 const PAGE_SIZE = 18;
 
+export const useHotPoems = () => {
+  return useQuery({
+    queryKey: ["hot-poems"],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc("get_hot_poems", { limit_count: 10 });
+      if (error) throw error;
+      return (data || []).map(mapPoem);
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+};
+
 export const usePoems = (options?: {
   tag?: string | null;
   search?: string;
@@ -163,6 +175,7 @@ export const usePublishPoem = () => {
       queryClient.invalidateQueries({ queryKey: ["my-poems"] });
       queryClient.invalidateQueries({ queryKey: ["available-styles"] });
       queryClient.invalidateQueries({ queryKey: ["available-languages"] });
+      queryClient.invalidateQueries({ queryKey: ["hot-poems"] });
     },
   });
 };
@@ -221,6 +234,7 @@ export const useDeletePoem = () => {
       queryClient.invalidateQueries({ queryKey: ["poems"] });
       queryClient.invalidateQueries({ queryKey: ["my-poems"] });
       queryClient.invalidateQueries({ queryKey: ["available-styles"] });
+      queryClient.invalidateQueries({ queryKey: ["hot-poems"] });
     },
   });
 };
