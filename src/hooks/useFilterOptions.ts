@@ -3,15 +3,11 @@ import { supabase } from "@/integrations/supabase/client";
 
 export const useAvailableLanguages = () => {
   return useQuery({
-    queryKey: ["available-languages-v2"],
+    queryKey: ["available-languages-v4"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("poems")
-        .select("language")
-        .not("language", "is", null);
+      const { data, error } = await supabase.rpc("get_distinct_languages");
       if (error) throw error;
-      const langs = [...new Set((data || []).map((r: any) => r.language).filter(Boolean))].sort();
-      return langs;
+      return (data || []).map((r: any) => r.language).filter(Boolean) as string[];
     },
     staleTime: 0,
     gcTime: 0,
@@ -20,11 +16,12 @@ export const useAvailableLanguages = () => {
 
 export const useAvailableTags = () => {
   return useQuery({
-    queryKey: ["available-tags-v2"],
+    queryKey: ["available-tags-v4"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("poems")
-        .select("tags");
+        .select("tags")
+        .limit(500);
       if (error) throw error;
       const tagSet = new Set<string>();
       (data || []).forEach((r: any) => {
@@ -39,15 +36,11 @@ export const useAvailableTags = () => {
 
 export const useAvailableStyles = () => {
   return useQuery({
-    queryKey: ["available-styles-v2"],
+    queryKey: ["available-styles-v4"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("poems")
-        .select("style")
-        .not("style", "is", null);
+      const { data, error } = await supabase.rpc("get_distinct_styles");
       if (error) throw error;
-      const styleSet = [...new Set((data || []).map((r: any) => r.style).filter(Boolean))].sort();
-      return styleSet;
+      return (data || []).map((r: any) => r.style).filter(Boolean) as string[];
     },
     staleTime: 0,
     gcTime: 0,
