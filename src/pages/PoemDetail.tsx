@@ -1,7 +1,7 @@
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import RelatedPoems from "@/components/RelatedPoems";
-import { useParams, Link, useNavigate } from "react-router-dom";
+import { useParams, Link, useNavigate, useLocation } from "react-router-dom";
 import { usePoem, useDeletePoem } from "@/hooks/usePoems";
 import { useLikeCount, useUserLiked, useToggleLike, useSavedStatus, useToggleSave } from "@/hooks/useInteractions";
 import {
@@ -17,7 +17,7 @@ import { toast } from "sonner";
 import { formatDistanceToNow } from "date-fns";
 import { es as esLocale, fr as frLocale } from "date-fns/locale";
 
-// ─── Single comment row with like + delete ─────────────────────────────────────
+// ─── Single comment row ────────────────────────────────────────────────────────
 interface CommentRowProps {
   c: { id: string; content: string; created_at: string; user_id: string; author_name: string };
   currentUserId?: string;
@@ -42,20 +42,15 @@ const CommentRow = ({ c, currentUserId, poemId, dateFnsLocale, t }: CommentRowPr
         </span>
       </div>
       <p className="text-sm text-foreground/80 whitespace-pre-wrap">{c.content}</p>
-
-      {/* Like + delete row */}
       <div className="mt-3 flex items-center gap-3">
         <button
           onClick={() => toggleLike.mutate(liked)}
           disabled={!currentUserId || toggleLike.isPending}
-          className={`flex items-center gap-1 text-xs transition-colors disabled:opacity-40 ${
-            liked ? "text-accent" : "text-muted-foreground hover:text-accent"
-          }`}
+          className={`flex items-center gap-1 text-xs transition-colors disabled:opacity-40 ${liked ? "text-accent" : "text-muted-foreground hover:text-accent"}`}
         >
           <Heart className={`h-3.5 w-3.5 ${liked ? "fill-current" : ""}`} />
           {likeCount > 0 && <span>{likeCount}</span>}
         </button>
-
         {isOwner && (
           <button
             onClick={() => {
@@ -81,6 +76,7 @@ const CommentRow = ({ c, currentUserId, poemId, dateFnsLocale, t }: CommentRowPr
 const PoemDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const { user } = useAuth();
   const { locale, t } = useLanguage();
   const { data: poem, isLoading } = usePoem(id);
@@ -96,9 +92,17 @@ const PoemDetail = () => {
   const [comment, setComment] = useState("");
 
   const dateFnsLocale = locale === "es" ? esLocale : locale === "fr" ? frLocale : undefined;
-
   const translateTag = (tag: string) =>
     tagTranslations[tag]?.[locale as Locale] ?? tag.charAt(0).toUpperCase() + tag.slice(1);
+
+  // Smart back — go to previous page if available, else discovery
+  const handleBack = () => {
+    if (window.history.length > 1) {
+      navigate(-1);
+    } else {
+      navigate("/");
+    }
+  };
 
   const handleLike = () => {
     if (!user) { navigate("/auth"); return; }
@@ -113,9 +117,8 @@ const PoemDetail = () => {
   };
 
   const handleShare = async () => {
-    const url = window.location.href;
     try {
-      await navigator.clipboard.writeText(url);
+      await navigator.clipboard.writeText(window.location.href);
       toast.success(t("detail_link_copied"));
     } catch {
       toast.error(t("detail_link_error"));
@@ -162,13 +165,13 @@ const PoemDetail = () => {
     <div className="min-h-screen flex flex-col">
       <Header />
       <main className="container flex-1 py-10 max-w-2xl">
-        <Link
-          to="/"
+        <button
+          onClick={handleBack}
           className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors mb-8"
         >
           <ArrowLeft className="h-4 w-4" />
           {t("detail_back")}
-        </Link>
+        </button>
 
         <article className="animate-fade-in">
           {/* Author block */}
@@ -213,37 +216,31 @@ const PoemDetail = () => {
             ))}
           </div>
 
-          {/* Poem content */}
+          {/* Poem content — translate="no" prevents Google Translate */}
           <div className="mt-8 rounded-xl border border-border bg-parchment-warm p-8 md:p-10 shadow-sm overflow-x-auto">
-            <pre className="whitespace-pre font-display text-sm leading-[1.9] text-foreground tracking-wide">
+            <pre
+              className="whitespace-pre font-display text-sm leading-[1.9] text-foreground tracking-wide"
+              translate="no"
+              lang={poem.language === "Spanish" ? "es" : poem.language === "French" ? "fr" : poem.language === "Catalan" ? "ca" : poem.language === "Italian" ? "it" : poem.language === "Portuguese" ? "pt" : "en"}
+            >
               {poem.content}
             </pre>
           </div>
 
           {/* Action bar */}
           <div className="mt-6 flex items-center gap-3 flex-wrap">
-            <button
-              onClick={handleLike}
-              className={`flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-medium transition-all ${
-                liked ? "bg-accent/10 text-accent shadow-sm" : "bg-secondary text-muted-foreground hover:text-foreground hover:bg-secondary/80"
-              }`}
-            >
+            <button onClick={handleLike}
+              className={`flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-medium transition-all ${liked ? "bg-accent/10 text-accent shadow-sm" : "bg-secondary text-muted-foreground hover:text-foreground hover:bg-secondary/80"}`}>
               <Heart className={`h-4 w-4 ${liked ? "fill-current" : ""}`} />
               {likeCount}
             </button>
-            <button
-              onClick={handleSave}
-              className={`flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-medium transition-all ${
-                saved ? "bg-accent/10 text-accent shadow-sm" : "bg-secondary text-muted-foreground hover:text-foreground hover:bg-secondary/80"
-              }`}
-            >
+            <button onClick={handleSave}
+              className={`flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-medium transition-all ${saved ? "bg-accent/10 text-accent shadow-sm" : "bg-secondary text-muted-foreground hover:text-foreground hover:bg-secondary/80"}`}>
               <Bookmark className={`h-4 w-4 ${saved ? "fill-current" : ""}`} />
               {saved ? t("detail_saved") : t("detail_save")}
             </button>
-            <button
-              onClick={handleShare}
-              className="flex items-center gap-1.5 rounded-full bg-secondary px-4 py-2 text-sm font-medium text-muted-foreground transition-all hover:text-foreground hover:bg-secondary/80"
-            >
+            <button onClick={handleShare}
+              className="flex items-center gap-1.5 rounded-full bg-secondary px-4 py-2 text-sm font-medium text-muted-foreground transition-all hover:text-foreground hover:bg-secondary/80">
               <Share2 className="h-4 w-4" />
               {t("detail_share")}
             </button>
@@ -272,7 +269,6 @@ const PoemDetail = () => {
               <MessageCircle className="h-5 w-5 text-accent" />
               {t("detail_comments")} ({commentCount})
             </h2>
-
             <div className="mt-4 rounded-xl border border-border bg-card p-4">
               {user ? (
                 <>
@@ -301,27 +297,16 @@ const PoemDetail = () => {
                 </p>
               )}
             </div>
-
             <div className="mt-4 space-y-3">
               {comments.map((c) => (
-                <CommentRow
-                  key={c.id}
-                  c={c}
-                  currentUserId={user?.id}
-                  poemId={id || ""}
-                  dateFnsLocale={dateFnsLocale}
-                  t={t}
-                />
+                <CommentRow key={c.id} c={c} currentUserId={user?.id} poemId={id || ""} dateFnsLocale={dateFnsLocale} t={t} />
               ))}
               {comments.length === 0 && (
-                <p className="text-center text-sm text-muted-foreground py-4">
-                  {t("detail_no_comments")}
-                </p>
+                <p className="text-center text-sm text-muted-foreground py-4">{t("detail_no_comments")}</p>
               )}
             </div>
           </section>
 
-          {/* Related poems */}
           <RelatedPoems poemId={poem.id} tags={poem.tags} authorName={poem.author_name} />
         </article>
       </main>
