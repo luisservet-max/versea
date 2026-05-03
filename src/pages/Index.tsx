@@ -1,13 +1,14 @@
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import PoemCard from "@/components/PoemCard";
-import { usePoems } from "@/hooks/usePoems";
+import { usePoems, useHotPoems } from "@/hooks/usePoems";
 import { useAvailableLanguages, useAvailableStyles } from "@/hooks/useFilterOptions";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { languageTranslations, styleTranslations, type Locale } from "@/i18n/translations";
 import { supabase } from "@/integrations/supabase/client";
 import { useState, useRef, useEffect, useCallback } from "react";
-import { Feather, Search, Loader2, Library, Users, Globe, Sparkles, ChevronDown, X, User, BookOpen } from "lucide-react";
+import { useSearchParams } from "react-router-dom";
+import { Feather, Search, Loader2, Library, Users, Globe, Sparkles, ChevronDown, X, User, BookOpen, Flame } from "lucide-react";
 import { Link } from "react-router-dom";
 
 type SourceFilter = "all" | "classic" | "community";
@@ -16,7 +17,6 @@ interface FilterDropdownProps {
   label: string;
   icon: React.ReactNode;
   value: string | null;
-  // displayOptions: what the user sees; valueOptions: what gets stored/filtered on
   displayOptions: string[];
   valueOptions: string[];
   onChange: (val: string | null) => void;
@@ -30,6 +30,7 @@ const FilterDropdown = ({
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
   const ref = useRef<HTMLDivElement>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
@@ -39,7 +40,6 @@ const FilterDropdown = ({
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
-  // Find display label for current value
   const valueIndex = valueOptions.indexOf(value || "");
   const displayValue = valueIndex >= 0 ? displayOptions[valueIndex] : null;
 
@@ -47,10 +47,23 @@ const FilterDropdown = ({
     .map((d, i) => ({ display: d, value: valueOptions[i] }))
     .filter(({ display }) => display.toLowerCase().includes(search.toLowerCase()));
 
+  const handleOpen = () => {
+    setOpen(!open);
+    // Don't auto-focus on mobile — user must tap the search box explicitly
+    if (!open) {
+      setTimeout(() => {
+        const isMobile = window.innerWidth < 768;
+        if (!isMobile && searchInputRef.current) {
+          searchInputRef.current.focus();
+        }
+      }, 50);
+    }
+  };
+
   return (
     <div ref={ref} className="relative">
       <button
-        onClick={() => setOpen(!open)}
+        onClick={handleOpen}
         className={`flex items-center gap-1.5 rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${
           value
             ? "border-accent bg-accent/10 text-accent-foreground"
@@ -73,7 +86,7 @@ const FilterDropdown = ({
           <div className="flex items-center gap-2 border-b border-border px-3 py-2">
             <Search className="h-3.5 w-3.5 text-muted-foreground" />
             <input
-              autoFocus
+              ref={searchInputRef}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder={placeholder}
@@ -107,11 +120,30 @@ const FilterDropdown = ({
 
 const Index = () => {
   const { t, locale } = useLanguage();
-  const [activeStyle, setActiveStyle] = useState<string | null>(null);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [committedSearch, setCommittedSearch] = useState("");
-  const [source, setSource] = useState<SourceFilter>("all");
-  const [language, setLanguage] = useState<string | null>(null);
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  // Initialise state from URL params so filters persist on back navigation
+  const [activeStyle, setActiveStyleState] = useState<string | null>(searchParams.get("style"));
+  const [searchQuery, setSearchQuery] = useState(searchParams.get("q") || "");
+  const [committedSearch, setCommittedSearch] = useState(searchParams.get("q") || "");
+  const [source, setSourceState] = useState<SourceFilter>((searchParams.get("source") as SourceFilter) || "all");
+  const [language, setLanguageState] = useState<string | null>(searchParams.get("lang"));
+
+  // Sync state to URL params
+  const setActiveStyle = (val: string | null) => {
+    setActiveStyleState(val);
+    setSearchParams(prev => { val ? prev.set("style", val) : prev.delete("style"); return prev; }, { replace: true });
+  };
+  const setSource = (val: SourceFilter) => {
+    setSourceState(val);
+    setSearchParams(prev => { val !== "all" ? prev.set("source", val) : prev.delete("source"); return prev; }, { replace: true });
+  };
+  const setLanguage = (val: string | null) => {
+    setLanguageState(val);
+    setSearchParams(prev => { val ? prev.set("lang", val) : prev.delete("lang"); return prev; }, { replace: true });
+  };
+
+  const hasFilters = !!(activeStyle || committedSearch || source !== "all" || language);
 
   const [suggestions, setSuggestions] = useState<{ type: "poem" | "author" | "classic_author"; id: string; label: string; sub?: string }[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
@@ -155,10 +187,16 @@ const Index = () => {
     setShowSuggestions(true);
   };
 
+  const commitSearch = (val: string) => {
+    setCommittedSearch(val);
+    setShowSuggestions(false);
+    setSearchParams(prev => { val ? prev.set("q", val) : prev.delete("q"); return prev; }, { replace: true });
+  };
+
   const { data: availableLanguages = [] } = useAvailableLanguages();
   const { data: availableStyles = [] } = useAvailableStyles();
+  const { data: hotPoems = [], isLoading: hotLoading } = useHotPoems();
 
-  // Translate filter options for display while keeping English values for DB queries
   const translatedLanguages = availableLanguages.map(
     (l) => languageTranslations[l]?.[locale as Locale] ?? l
   );
@@ -174,6 +212,9 @@ const Index = () => {
   });
 
   const poems = data?.pages.flat() ?? [];
+
+  // Show hot poems only when no filters are active
+  const showHot = !hasFilters;
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -202,9 +243,7 @@ const Index = () => {
                 type="text"
                 value={searchQuery}
                 onChange={(e) => handleSearchInput(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") { setCommittedSearch(searchQuery); setShowSuggestions(false); }
-                }}
+                onKeyDown={(e) => { if (e.key === "Enter") commitSearch(searchQuery); }}
                 onFocus={() => { if (suggestions.length > 0) setShowSuggestions(true); }}
                 placeholder={t("hero_search_placeholder")}
                 className="flex-1 bg-transparent text-sm text-foreground placeholder:text-muted-foreground outline-none"
@@ -218,12 +257,7 @@ const Index = () => {
                   </div>
                 ) : (
                   suggestions.map((s, i) => {
-                    const href =
-                      s.type === "poem"
-                        ? `/poem/${s.id}`
-                        : s.type === "author"
-                        ? `/author/${s.id}`
-                        : `/classic-author/${encodeURIComponent(s.id)}`;
+                    const href = s.type === "poem" ? `/poem/${s.id}` : s.type === "author" ? `/author/${s.id}` : `/classic-author/${encodeURIComponent(s.id)}`;
                     const Icon = s.type === "poem" ? BookOpen : User;
                     return (
                       <Link
@@ -235,11 +269,7 @@ const Index = () => {
                         <Icon className="h-4 w-4 shrink-0 text-muted-foreground" />
                         <div className="min-w-0">
                           <span className="font-medium text-foreground">{s.label}</span>
-                          {s.sub && (
-                            <span className="ml-1.5 text-xs text-muted-foreground">
-                              {t("by")} {s.sub}
-                            </span>
-                          )}
+                          {s.sub && <span className="ml-1.5 text-xs text-muted-foreground">{t("by")} {s.sub}</span>}
                           <span className="ml-1.5 text-[10px] text-accent/70 uppercase">
                             {s.type === "classic_author" ? t("filter_classic") : t("filter_community")}
                           </span>
@@ -268,9 +298,7 @@ const Index = () => {
               key={key}
               onClick={() => setSource(key)}
               className={`flex items-center gap-1.5 shrink-0 rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
-                source === key
-                  ? "bg-accent text-accent-foreground"
-                  : "bg-secondary text-muted-foreground hover:text-foreground"
+                source === key ? "bg-accent text-accent-foreground" : "bg-secondary text-muted-foreground hover:text-foreground"
               }`}
             >
               {Icon && <Icon className="h-3 w-3" />}
@@ -304,13 +332,35 @@ const Index = () => {
         </div>
       </section>
 
-      {/* Poems grid */}
       <main className="container flex-1 py-10">
+        {/* Hot poems section — only shown when no filters applied */}
+        {showHot && hotPoems.length > 0 && (
+          <div className="mb-12">
+            <h2 className="font-display text-2xl font-semibold text-foreground mb-6 flex items-center gap-2">
+              <Flame className="h-5 w-5 text-accent" />
+              Trending This Month
+            </h2>
+            {hotLoading ? (
+              <div className="flex justify-center py-10">
+                <Loader2 className="h-6 w-6 animate-spin text-accent" />
+              </div>
+            ) : (
+              <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+                {hotPoems.slice(0, 6).map((poem, i) => (
+                  <div key={poem.id} className="animate-fade-in" style={{ animationDelay: `${Math.min(i, 5) * 80}ms` }}>
+                    <PoemCard poem={poem} locale={locale as Locale} />
+                  </div>
+                ))}
+              </div>
+            )}
+            <div className="mt-8 border-t border-border" />
+          </div>
+        )}
+
+        {/* All poems / filtered poems */}
         <h2 className="font-display text-2xl font-semibold text-foreground mb-6">
           {activeStyle ? (
-            <>{t("featured_poems")} — <span className="text-accent italic">
-              {styleTranslations[activeStyle]?.[locale as Locale] ?? activeStyle}
-            </span></>
+            <>{t("featured_poems")} — <span className="text-accent italic">{styleTranslations[activeStyle]?.[locale as Locale] ?? activeStyle}</span></>
           ) : (
             t("featured_poems")
           )}
@@ -324,11 +374,7 @@ const Index = () => {
           <>
             <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
               {poems.map((poem, i) => (
-                <div
-                  key={poem.id}
-                  className="animate-fade-in"
-                  style={{ animationDelay: `${Math.min(i, 5) * 100}ms` }}
-                >
+                <div key={poem.id} className="animate-fade-in" style={{ animationDelay: `${Math.min(i, 5) * 100}ms` }}>
                   <PoemCard poem={poem} locale={locale as Locale} />
                 </div>
               ))}
@@ -342,9 +388,7 @@ const Index = () => {
                 >
                   {isFetchingNextPage ? (
                     <><Loader2 className="h-4 w-4 animate-spin" /> {t("loading")}</>
-                  ) : (
-                    t("load_more")
-                  )}
+                  ) : t("load_more")}
                 </button>
               </div>
             )}
