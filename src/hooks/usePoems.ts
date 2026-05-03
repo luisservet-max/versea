@@ -40,23 +40,25 @@ function mapPoem(row: any): PoemWithAuthor {
 
 const PAGE_SIZE = 18;
 
-// Reads from trending_cache — refreshed every hour by cron, instant to query
-export const useHotPoems = () => {
+// Trending: top 6 by likes in the past 30 days, respecting active filters
+export const useHotPoems = (options?: {
+  source?: "all" | "classic" | "community";
+  language?: string | null;
+  style?: string | null;
+}) => {
   return useQuery({
-    queryKey: ["hot-poems"],
+    queryKey: ["hot-poems", options?.source, options?.language, options?.style],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("trending_cache")
-        .select("poem_id, like_count, poems(*)")
-        .order("like_count", { ascending: false })
-        .limit(10);
+      const { data, error } = await supabase.rpc("get_trending_poems", {
+        p_limit: 6,
+        p_source: options?.source || "all",
+        p_language: options?.language || null,
+        p_style: options?.style || null,
+      });
       if (error) throw error;
-      return (data || [])
-        .map((row: any) => row.poems)
-        .filter(Boolean)
-        .map(mapPoem);
+      return (data || []).map(mapPoem);
     },
-    staleTime: 10 * 60 * 1000, // consider fresh for 10 minutes
+    staleTime: 5 * 60 * 1000,
   });
 };
 
@@ -183,6 +185,7 @@ export const usePublishPoem = () => {
       queryClient.invalidateQueries({ queryKey: ["my-poems"] });
       queryClient.invalidateQueries({ queryKey: ["available-styles"] });
       queryClient.invalidateQueries({ queryKey: ["available-languages"] });
+      queryClient.invalidateQueries({ queryKey: ["hot-poems"] });
     },
   });
 };
@@ -241,6 +244,7 @@ export const useDeletePoem = () => {
       queryClient.invalidateQueries({ queryKey: ["poems"] });
       queryClient.invalidateQueries({ queryKey: ["my-poems"] });
       queryClient.invalidateQueries({ queryKey: ["available-styles"] });
+      queryClient.invalidateQueries({ queryKey: ["hot-poems"] });
     },
   });
 };
