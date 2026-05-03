@@ -5,12 +5,15 @@ export const useAvailableLanguages = () => {
   return useQuery({
     queryKey: ["available-languages"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("poems").select("language");
+      const { data, error } = await supabase
+        .from("poems")
+        .select("language");
       if (error) throw error;
       const langs = new Set((data || []).map((r) => r.language).filter(Boolean));
       return Array.from(langs).sort();
     },
-    staleTime: 5 * 60 * 1000,
+    staleTime: 0, // always refetch — language list changes as poems are imported
+    refetchOnMount: true,
   });
 };
 
@@ -18,7 +21,9 @@ export const useAvailableTags = () => {
   return useQuery({
     queryKey: ["available-tags"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("poems").select("tags");
+      const { data, error } = await supabase
+        .from("poems")
+        .select("tags");
       if (error) throw error;
       const tagSet = new Set<string>();
       (data || []).forEach((r) => {
@@ -26,7 +31,8 @@ export const useAvailableTags = () => {
       });
       return Array.from(tagSet).sort();
     },
-    staleTime: 5 * 60 * 1000,
+    staleTime: 0,
+    refetchOnMount: true,
   });
 };
 
@@ -45,6 +51,7 @@ export const useAvailableStyles = () => {
       });
       return Array.from(styleSet).sort();
     },
-    staleTime: 5 * 60 * 1000,
+    staleTime: 0,
+    refetchOnMount: true,
   });
 };
