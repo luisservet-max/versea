@@ -40,15 +40,23 @@ function mapPoem(row: any): PoemWithAuthor {
 
 const PAGE_SIZE = 18;
 
+// Reads from trending_cache — refreshed every hour by cron, instant to query
 export const useHotPoems = () => {
   return useQuery({
     queryKey: ["hot-poems"],
     queryFn: async () => {
-      const { data, error } = await supabase.rpc("get_hot_poems", { limit_count: 10 });
+      const { data, error } = await supabase
+        .from("trending_cache")
+        .select("poem_id, like_count, poems(*)")
+        .order("like_count", { ascending: false })
+        .limit(10);
       if (error) throw error;
-      return (data || []).map(mapPoem);
+      return (data || [])
+        .map((row: any) => row.poems)
+        .filter(Boolean)
+        .map(mapPoem);
     },
-    staleTime: 5 * 60 * 1000,
+    staleTime: 10 * 60 * 1000, // consider fresh for 10 minutes
   });
 };
 
@@ -175,7 +183,6 @@ export const usePublishPoem = () => {
       queryClient.invalidateQueries({ queryKey: ["my-poems"] });
       queryClient.invalidateQueries({ queryKey: ["available-styles"] });
       queryClient.invalidateQueries({ queryKey: ["available-languages"] });
-      queryClient.invalidateQueries({ queryKey: ["hot-poems"] });
     },
   });
 };
@@ -234,7 +241,6 @@ export const useDeletePoem = () => {
       queryClient.invalidateQueries({ queryKey: ["poems"] });
       queryClient.invalidateQueries({ queryKey: ["my-poems"] });
       queryClient.invalidateQueries({ queryKey: ["available-styles"] });
-      queryClient.invalidateQueries({ queryKey: ["hot-poems"] });
     },
   });
 };
