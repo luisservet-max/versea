@@ -48,9 +48,9 @@ const FilterDropdown = ({
     .filter(({ display }) => display.toLowerCase().includes(search.toLowerCase()));
 
   const handleOpen = () => {
-    setOpen(!open);
-    // Don't auto-focus on mobile — user must tap the search box explicitly
-    if (!open) {
+    const newOpen = !open;
+    setOpen(newOpen);
+    if (newOpen) {
       setTimeout(() => {
         const isMobile = window.innerWidth < 768;
         if (!isMobile && searchInputRef.current) {
@@ -122,28 +122,38 @@ const Index = () => {
   const { t, locale } = useLanguage();
   const [searchParams, setSearchParams] = useSearchParams();
 
-  // Initialise state from URL params so filters persist on back navigation
+  // Initialise from URL so filters persist on back navigation
   const [activeStyle, setActiveStyleState] = useState<string | null>(searchParams.get("style"));
   const [searchQuery, setSearchQuery] = useState(searchParams.get("q") || "");
   const [committedSearch, setCommittedSearch] = useState(searchParams.get("q") || "");
   const [source, setSourceState] = useState<SourceFilter>((searchParams.get("source") as SourceFilter) || "all");
   const [language, setLanguageState] = useState<string | null>(searchParams.get("lang"));
 
-  // Sync state to URL params
   const setActiveStyle = (val: string | null) => {
     setActiveStyleState(val);
-    setSearchParams(prev => { val ? prev.set("style", val) : prev.delete("style"); return prev; }, { replace: true });
-  };
-  const setSource = (val: SourceFilter) => {
-    setSourceState(val);
-    setSearchParams(prev => { val !== "all" ? prev.set("source", val) : prev.delete("source"); return prev; }, { replace: true });
-  };
-  const setLanguage = (val: string | null) => {
-    setLanguageState(val);
-    setSearchParams(prev => { val ? prev.set("lang", val) : prev.delete("lang"); return prev; }, { replace: true });
+    setSearchParams(prev => { val ? prev.set("style", val) : prev.delete("style"); return new URLSearchParams(prev); }, { replace: true });
   };
 
-  const hasFilters = !!(activeStyle || committedSearch || source !== "all" || language);
+  const setSource = (val: SourceFilter) => {
+    setSourceState(val);
+    setSearchParams(prev => {
+      const next = new URLSearchParams(prev);
+      if (val !== "all") next.set("source", val);
+      else next.delete("source");
+      return next;
+    }, { replace: true });
+  };
+
+  const setLanguage = (val: string | null) => {
+    setLanguageState(val);
+    setSearchParams(prev => { val ? prev.set("lang", val) : prev.delete("lang"); return new URLSearchParams(prev); }, { replace: true });
+  };
+
+  const commitSearch = (val: string) => {
+    setCommittedSearch(val);
+    setShowSuggestions(false);
+    setSearchParams(prev => { val ? prev.set("q", val) : prev.delete("q"); return new URLSearchParams(prev); }, { replace: true });
+  };
 
   const [suggestions, setSuggestions] = useState<{ type: "poem" | "author" | "classic_author"; id: string; label: string; sub?: string }[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
@@ -187,12 +197,6 @@ const Index = () => {
     setShowSuggestions(true);
   };
 
-  const commitSearch = (val: string) => {
-    setCommittedSearch(val);
-    setShowSuggestions(false);
-    setSearchParams(prev => { val ? prev.set("q", val) : prev.delete("q"); return prev; }, { replace: true });
-  };
-
   const { data: availableLanguages = [] } = useAvailableLanguages();
   const { data: availableStyles = [] } = useAvailableStyles();
   const { data: hotPoems = [], isLoading: hotLoading } = useHotPoems();
@@ -213,8 +217,8 @@ const Index = () => {
 
   const poems = data?.pages.flat() ?? [];
 
-  // Show hot poems only when no filters are active
-  const showHot = !hasFilters;
+  // Trending always shows — only hidden when there's a text search active
+  const showHot = !committedSearch && hotPoems.length > 0;
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -248,6 +252,11 @@ const Index = () => {
                 placeholder={t("hero_search_placeholder")}
                 className="flex-1 bg-transparent text-sm text-foreground placeholder:text-muted-foreground outline-none"
               />
+              {searchQuery && (
+                <button onClick={() => { setSearchQuery(""); commitSearch(""); }} className="text-muted-foreground hover:text-foreground">
+                  <X className="h-4 w-4" />
+                </button>
+              )}
             </div>
             {showSuggestions && (suggestions.length > 0 || sugLoading) && (
               <div className="absolute left-0 right-0 top-full z-50 mt-1 rounded-lg border border-border bg-popover shadow-lg max-h-64 overflow-y-auto">
@@ -298,7 +307,9 @@ const Index = () => {
               key={key}
               onClick={() => setSource(key)}
               className={`flex items-center gap-1.5 shrink-0 rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
-                source === key ? "bg-accent text-accent-foreground" : "bg-secondary text-muted-foreground hover:text-foreground"
+                source === key
+                  ? "bg-accent text-accent-foreground"
+                  : "bg-secondary text-muted-foreground hover:text-foreground"
               }`}
             >
               {Icon && <Icon className="h-3 w-3" />}
@@ -333,8 +344,8 @@ const Index = () => {
       </section>
 
       <main className="container flex-1 py-10">
-        {/* Hot poems section — only shown when no filters applied */}
-        {showHot && hotPoems.length > 0 && (
+        {/* Trending — always visible unless user has typed a search */}
+        {showHot && (
           <div className="mb-12">
             <h2 className="font-display text-2xl font-semibold text-foreground mb-6 flex items-center gap-2">
               <Flame className="h-5 w-5 text-accent" />
@@ -357,7 +368,7 @@ const Index = () => {
           </div>
         )}
 
-        {/* All poems / filtered poems */}
+        {/* All poems / filtered */}
         <h2 className="font-display text-2xl font-semibold text-foreground mb-6">
           {activeStyle ? (
             <>{t("featured_poems")} — <span className="text-accent italic">{styleTranslations[activeStyle]?.[locale as Locale] ?? activeStyle}</span></>
@@ -407,4 +418,3 @@ const Index = () => {
 };
 
 export default Index;
- 
