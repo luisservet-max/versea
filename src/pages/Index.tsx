@@ -53,9 +53,7 @@ const FilterDropdown = ({
     if (newOpen) {
       setTimeout(() => {
         const isMobile = window.innerWidth < 768;
-        if (!isMobile && searchInputRef.current) {
-          searchInputRef.current.focus();
-        }
+        if (!isMobile && searchInputRef.current) searchInputRef.current.focus();
       }, 50);
     }
   };
@@ -102,9 +100,7 @@ const FilterDropdown = ({
                   key={optVal}
                   onClick={() => { onChange(optVal); setOpen(false); setSearch(""); }}
                   className={`w-full rounded-md px-3 py-1.5 text-left text-sm transition-colors ${
-                    optVal === value
-                      ? "bg-accent text-accent-foreground"
-                      : "text-foreground hover:bg-secondary"
+                    optVal === value ? "bg-accent text-accent-foreground" : "text-foreground hover:bg-secondary"
                   }`}
                 >
                   {display}
@@ -122,7 +118,6 @@ const Index = () => {
   const { t, locale } = useLanguage();
   const [searchParams, setSearchParams] = useSearchParams();
 
-  // Initialise from URL so filters persist on back navigation
   const [activeStyle, setActiveStyleState] = useState<string | null>(searchParams.get("style"));
   const [searchQuery, setSearchQuery] = useState(searchParams.get("q") || "");
   const [committedSearch, setCommittedSearch] = useState(searchParams.get("q") || "");
@@ -131,28 +126,20 @@ const Index = () => {
 
   const setActiveStyle = (val: string | null) => {
     setActiveStyleState(val);
-    setSearchParams(prev => { val ? prev.set("style", val) : prev.delete("style"); return new URLSearchParams(prev); }, { replace: true });
+    setSearchParams(prev => { const n = new URLSearchParams(prev); val ? n.set("style", val) : n.delete("style"); return n; }, { replace: true });
   };
-
   const setSource = (val: SourceFilter) => {
     setSourceState(val);
-    setSearchParams(prev => {
-      const next = new URLSearchParams(prev);
-      if (val !== "all") next.set("source", val);
-      else next.delete("source");
-      return next;
-    }, { replace: true });
+    setSearchParams(prev => { const n = new URLSearchParams(prev); val !== "all" ? n.set("source", val) : n.delete("source"); return n; }, { replace: true });
   };
-
   const setLanguage = (val: string | null) => {
     setLanguageState(val);
-    setSearchParams(prev => { val ? prev.set("lang", val) : prev.delete("lang"); return new URLSearchParams(prev); }, { replace: true });
+    setSearchParams(prev => { const n = new URLSearchParams(prev); val ? n.set("lang", val) : n.delete("lang"); return n; }, { replace: true });
   };
-
   const commitSearch = (val: string) => {
     setCommittedSearch(val);
     setShowSuggestions(false);
-    setSearchParams(prev => { val ? prev.set("q", val) : prev.delete("q"); return new URLSearchParams(prev); }, { replace: true });
+    setSearchParams(prev => { const n = new URLSearchParams(prev); val ? n.set("q", val) : n.delete("q"); return n; }, { replace: true });
   };
 
   const [suggestions, setSuggestions] = useState<{ type: "poem" | "author" | "classic_author"; id: string; label: string; sub?: string }[]>([]);
@@ -169,8 +156,7 @@ const Index = () => {
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
-  const normalize = (s: string) =>
-    s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+  const normalize = (s: string) => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
 
   const fetchSuggestions = useCallback(async (q: string) => {
     if (q.length < 2) { setSuggestions([]); return; }
@@ -199,14 +185,16 @@ const Index = () => {
 
   const { data: availableLanguages = [] } = useAvailableLanguages();
   const { data: availableStyles = [] } = useAvailableStyles();
-  const { data: hotPoems = [], isLoading: hotLoading } = useHotPoems();
 
-  const translatedLanguages = availableLanguages.map(
-    (l) => languageTranslations[l]?.[locale as Locale] ?? l
-  );
-  const translatedStyles = availableStyles.map(
-    (s) => styleTranslations[s]?.[locale as Locale] ?? s
-  );
+  const translatedLanguages = availableLanguages.map((l) => languageTranslations[l]?.[locale as Locale] ?? l);
+  const translatedStyles = availableStyles.map((s) => styleTranslations[s]?.[locale as Locale] ?? s);
+
+  // Pass active filters to trending so it shows top 6 matching poems
+  const { data: hotPoems = [], isLoading: hotLoading } = useHotPoems({
+    source,
+    language,
+    style: activeStyle,
+  });
 
   const { data, isLoading, fetchNextPage, hasNextPage, isFetchingNextPage } = usePoems({
     search: committedSearch || undefined,
@@ -216,9 +204,7 @@ const Index = () => {
   });
 
   const poems = data?.pages.flat() ?? [];
-
-  // Trending always shows — only hidden when there's a text search active
-  const showHot = !committedSearch && hotPoems.length > 0;
+  const showHot = !committedSearch; // only hide trending when user is searching text
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -236,9 +222,7 @@ const Index = () => {
             <span className="italic text-accent">{t("hero_title_accent")}</span>
             {t("hero_title_2")}
           </h1>
-          <p className="mt-4 max-w-lg text-lg text-muted-foreground">
-            {t("hero_subtitle")}
-          </p>
+          <p className="mt-4 max-w-lg text-lg text-muted-foreground">{t("hero_subtitle")}</p>
 
           <div ref={searchRef} className="relative z-50 mt-8 w-full max-w-md">
             <div className="flex items-center gap-2 rounded-lg border border-border bg-card px-4 py-2 shadow-sm focus-within:ring-2 focus-within:ring-accent/30">
@@ -269,12 +253,8 @@ const Index = () => {
                     const href = s.type === "poem" ? `/poem/${s.id}` : s.type === "author" ? `/author/${s.id}` : `/classic-author/${encodeURIComponent(s.id)}`;
                     const Icon = s.type === "poem" ? BookOpen : User;
                     return (
-                      <Link
-                        key={`${s.type}-${s.id}-${i}`}
-                        to={href}
-                        onClick={() => setShowSuggestions(false)}
-                        className="flex items-center gap-3 px-4 py-2.5 text-sm transition-colors hover:bg-secondary"
-                      >
+                      <Link key={`${s.type}-${s.id}-${i}`} to={href} onClick={() => setShowSuggestions(false)}
+                        className="flex items-center gap-3 px-4 py-2.5 text-sm transition-colors hover:bg-secondary">
                         <Icon className="h-4 w-4 shrink-0 text-muted-foreground" />
                         <div className="min-w-0">
                           <span className="font-medium text-foreground">{s.label}</span>
@@ -307,9 +287,7 @@ const Index = () => {
               key={key}
               onClick={() => setSource(key)}
               className={`flex items-center gap-1.5 shrink-0 rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
-                source === key
-                  ? "bg-accent text-accent-foreground"
-                  : "bg-secondary text-muted-foreground hover:text-foreground"
+                source === key ? "bg-accent text-accent-foreground" : "bg-secondary text-muted-foreground hover:text-foreground"
               }`}
             >
               {Icon && <Icon className="h-3 w-3" />}
@@ -344,7 +322,7 @@ const Index = () => {
       </section>
 
       <main className="container flex-1 py-10">
-        {/* Trending — always visible unless user has typed a search */}
+        {/* Trending — shows top 6 by likes in past 30 days, respects all active filters */}
         {showHot && (
           <div className="mb-12">
             <h2 className="font-display text-2xl font-semibold text-foreground mb-6 flex items-center gap-2">
@@ -355,26 +333,26 @@ const Index = () => {
               <div className="flex justify-center py-10">
                 <Loader2 className="h-6 w-6 animate-spin text-accent" />
               </div>
-            ) : (
+            ) : hotPoems.length > 0 ? (
               <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-                {hotPoems.slice(0, 6).map((poem, i) => (
+                {hotPoems.map((poem, i) => (
                   <div key={poem.id} className="animate-fade-in" style={{ animationDelay: `${Math.min(i, 5) * 80}ms` }}>
                     <PoemCard poem={poem} locale={locale as Locale} />
                   </div>
                 ))}
               </div>
+            ) : (
+              <p className="text-sm text-muted-foreground">No trending poems yet for this filter.</p>
             )}
             <div className="mt-8 border-t border-border" />
           </div>
         )}
 
-        {/* All poems / filtered */}
+        {/* All poems */}
         <h2 className="font-display text-2xl font-semibold text-foreground mb-6">
           {activeStyle ? (
             <>{t("featured_poems")} — <span className="text-accent italic">{styleTranslations[activeStyle]?.[locale as Locale] ?? activeStyle}</span></>
-          ) : (
-            t("featured_poems")
-          )}
+          ) : t("featured_poems")}
         </h2>
 
         {isLoading ? (
@@ -392,14 +370,9 @@ const Index = () => {
             </div>
             {hasNextPage && (
               <div className="mt-8 flex justify-center">
-                <button
-                  onClick={() => fetchNextPage()}
-                  disabled={isFetchingNextPage}
-                  className="inline-flex items-center gap-2 rounded-md bg-secondary px-6 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-secondary/80 disabled:opacity-50"
-                >
-                  {isFetchingNextPage ? (
-                    <><Loader2 className="h-4 w-4 animate-spin" /> {t("loading")}</>
-                  ) : t("load_more")}
+                <button onClick={() => fetchNextPage()} disabled={isFetchingNextPage}
+                  className="inline-flex items-center gap-2 rounded-md bg-secondary px-6 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-secondary/80 disabled:opacity-50">
+                  {isFetchingNextPage ? <><Loader2 className="h-4 w-4 animate-spin" /> {t("loading")}</> : t("load_more")}
                 </button>
               </div>
             )}
