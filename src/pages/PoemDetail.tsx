@@ -1,7 +1,7 @@
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import RelatedPoems from "@/components/RelatedPoems";
-import { useParams, Link, useNavigate, useLocation } from "react-router-dom";
+import { useParams, Link, useNavigate } from "react-router-dom";
 import { usePoem, useDeletePoem } from "@/hooks/usePoems";
 import { useLikeCount, useUserLiked, useToggleLike, useSavedStatus, useToggleSave } from "@/hooks/useInteractions";
 import {
@@ -17,7 +17,6 @@ import { toast } from "sonner";
 import { formatDistanceToNow } from "date-fns";
 import { es as esLocale, fr as frLocale } from "date-fns/locale";
 
-// ─── Single comment row ────────────────────────────────────────────────────────
 interface CommentRowProps {
   c: { id: string; content: string; created_at: string; user_id: string; author_name: string };
   currentUserId?: string;
@@ -72,11 +71,9 @@ const CommentRow = ({ c, currentUserId, poemId, dateFnsLocale, t }: CommentRowPr
   );
 };
 
-// ─── Poem Detail Page ──────────────────────────────────────────────────────────
 const PoemDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const location = useLocation();
   const { user } = useAuth();
   const { locale, t } = useLanguage();
   const { data: poem, isLoading } = usePoem(id);
@@ -95,13 +92,9 @@ const PoemDetail = () => {
   const translateTag = (tag: string) =>
     tagTranslations[tag]?.[locale as Locale] ?? tag.charAt(0).toUpperCase() + tag.slice(1);
 
-  // Smart back — go to previous page if available, else discovery
   const handleBack = () => {
-    if (window.history.length > 1) {
-      navigate(-1);
-    } else {
-      navigate("/");
-    }
+    if (window.history.length > 1) navigate(-1);
+    else navigate("/");
   };
 
   const handleLike = () => {
@@ -165,12 +158,14 @@ const PoemDetail = () => {
     <div className="min-h-screen flex flex-col">
       <Header />
       <main className="container flex-1 py-10 max-w-2xl">
+
+        {/* Back button — always just "Go back" regardless of where user came from */}
         <button
           onClick={handleBack}
           className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors mb-8"
         >
           <ArrowLeft className="h-4 w-4" />
-          {t("detail_back")}
+          Go back
         </button>
 
         <article className="animate-fade-in">
@@ -216,7 +211,7 @@ const PoemDetail = () => {
             ))}
           </div>
 
-          {/* Poem content — translate="no" prevents Google Translate */}
+          {/* Poem content */}
           <div className="mt-8 rounded-xl border border-border bg-parchment-warm p-8 md:p-10 shadow-sm overflow-x-auto">
             <pre
               className="whitespace-pre font-display text-sm leading-[1.9] text-foreground tracking-wide"
