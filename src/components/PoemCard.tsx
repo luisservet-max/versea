@@ -131,4 +131,3 @@ const PoemCard = ({ poem, locale: localeProp }: PoemCardProps) => {
 };
 
 export default PoemCard;
-
