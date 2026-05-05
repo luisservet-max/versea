@@ -60,6 +60,7 @@ const FilterDropdown = ({
   return (
     <div ref={ref} className="relative">
       <button
+        type="button"
         onClick={handleOpen}
         className={`flex items-center gap-1.5 rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${
           value
@@ -96,6 +97,7 @@ const FilterDropdown = ({
             ) : (
               filtered.map(({ display, value: optVal }) => (
                 <button
+                  type="button"
                   key={optVal}
                   onClick={() => { onChange(optVal); setOpen(false); setSearch(""); }}
                   className={`w-full rounded-md px-3 py-1.5 text-left text-sm transition-colors ${
@@ -113,10 +115,71 @@ const FilterDropdown = ({
   );
 };
 
+// Poem grid component — gets a key prop so it fully re-mounts when filters change
+interface PoemGridProps {
+  source: SourceFilter;
+  language: string | null;
+  activeStyle: string | null;
+  committedSearch: string;
+  locale: Locale;
+  t: (key: string) => string;
+}
+
+const PoemGrid = ({ source, language, activeStyle, committedSearch, locale, t }: PoemGridProps) => {
+  const { data, isLoading, fetchNextPage, hasNextPage, isFetchingNextPage } = usePoems({
+    search: committedSearch || undefined,
+    source,
+    language,
+    style: activeStyle,
+  });
+
+  const poems = data?.pages.flat() ?? [];
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <Loader2 className="h-6 w-6 animate-spin text-accent" />
+      </div>
+    );
+  }
+
+  if (poems.length === 0) {
+    return (
+      <div className="flex flex-col items-center py-20 text-center">
+        <Search className="h-10 w-10 text-muted-foreground/40 mb-3" />
+        <p className="text-muted-foreground">{t("no_poems_found")}</p>
+      </div>
+    );
+  }
+
+  return (
+    <>
+      <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+        {poems.map((poem, i) => (
+          <div key={poem.id} className="animate-fade-in" style={{ animationDelay: `${Math.min(i, 5) * 100}ms` }}>
+            <PoemCard poem={poem} locale={locale} />
+          </div>
+        ))}
+      </div>
+      {hasNextPage && (
+        <div className="mt-8 flex justify-center">
+          <button
+            type="button"
+            onClick={() => fetchNextPage()}
+            disabled={isFetchingNextPage}
+            className="inline-flex items-center gap-2 rounded-md bg-secondary px-6 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-secondary/80 disabled:opacity-50"
+          >
+            {isFetchingNextPage ? <><Loader2 className="h-4 w-4 animate-spin" /> {t("loading")}</> : t("load_more")}
+          </button>
+        </div>
+      )}
+    </>
+  );
+};
+
 const Index = () => {
   const { t, locale } = useLanguage();
 
-  // Simple local state — no URL params to avoid React batching issues
   const [source, setSource] = useState<SourceFilter>("all");
   const [language, setLanguage] = useState<string | null>(null);
   const [activeStyle, setActiveStyle] = useState<string | null>(null);
@@ -177,15 +240,11 @@ const Index = () => {
 
   const { data: hotPoems = [], isLoading: hotLoading } = useHotPoems({ source, language, style: activeStyle });
 
-  const { data, isLoading, fetchNextPage, hasNextPage, isFetchingNextPage } = usePoems({
-    search: committedSearch || undefined,
-    source,
-    language,
-    style: activeStyle,
-  });
-
-  const poems = data?.pages.flat() ?? [];
   const showHot = !committedSearch;
+
+  // This key forces PoemGrid to fully re-mount when any filter changes
+  // which resets the infinite query and shows fresh results
+  const gridKey = `${source}-${language}-${activeStyle}-${committedSearch}`;
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -218,7 +277,7 @@ const Index = () => {
                 className="flex-1 bg-transparent text-sm text-foreground placeholder:text-muted-foreground outline-none"
               />
               {searchQuery && (
-                <button onClick={() => { setSearchQuery(""); commitSearch(""); }} className="text-muted-foreground hover:text-foreground">
+                <button type="button" onClick={() => { setSearchQuery(""); commitSearch(""); }} className="text-muted-foreground hover:text-foreground">
                   <X className="h-4 w-4" />
                 </button>
               )}
@@ -258,32 +317,25 @@ const Index = () => {
       {/* Filter bar */}
       <section className="border-b border-border bg-card">
         <div className="container py-4 flex flex-wrap items-center gap-2">
-          <button
-            onClick={() => setSource("all")}
-            className={`flex items-center gap-1.5 shrink-0 rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
-              source === "all" ? "bg-accent text-accent-foreground" : "bg-secondary text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            {t("filter_all")}
-          </button>
-          <button
-            onClick={() => setSource("classic")}
-            className={`flex items-center gap-1.5 shrink-0 rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
-              source === "classic" ? "bg-accent text-accent-foreground" : "bg-secondary text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            <Library className="h-3 w-3" />
-            {t("filter_classic")}
-          </button>
-          <button
-            onClick={() => setSource("community")}
-            className={`flex items-center gap-1.5 shrink-0 rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
-              source === "community" ? "bg-accent text-accent-foreground" : "bg-secondary text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            <Users className="h-3 w-3" />
-            {t("filter_community")}
-          </button>
+          {([
+            { key: "all" as SourceFilter, label: t("filter_all"), icon: null },
+            { key: "classic" as SourceFilter, label: t("filter_classic"), icon: <Library className="h-3 w-3" /> },
+            { key: "community" as SourceFilter, label: t("filter_community"), icon: <Users className="h-3 w-3" /> },
+          ]).map(({ key, label, icon }) => (
+            <button
+              type="button"
+              key={key}
+              onClick={() => setSource(key)}
+              className={`flex items-center gap-1.5 shrink-0 rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
+                source === key
+                  ? "bg-accent text-accent-foreground"
+                  : "bg-secondary text-muted-foreground hover:text-foreground hover:bg-secondary/80"
+              }`}
+            >
+              {icon}
+              {label}
+            </button>
+          ))}
 
           <div className="w-px h-6 bg-border mx-1" />
 
@@ -317,7 +369,7 @@ const Index = () => {
           <div className="mb-12">
             <h2 className="font-display text-2xl font-semibold text-foreground mb-6 flex items-center gap-2">
               <Flame className="h-5 w-5 text-accent" />
-              Trending This Month
+              Trending
             </h2>
             {hotLoading ? (
               <div className="flex justify-center py-10">
@@ -338,41 +390,22 @@ const Index = () => {
           </div>
         )}
 
-        {/* All poems */}
+        {/* All poems — key forces full re-mount on any filter change */}
         <h2 className="font-display text-2xl font-semibold text-foreground mb-6">
           {activeStyle
             ? <>{t("featured_poems")} — <span className="text-accent italic">{styleTranslations[activeStyle]?.[locale as Locale] ?? activeStyle}</span></>
             : t("featured_poems")}
         </h2>
 
-        {isLoading ? (
-          <div className="flex items-center justify-center py-20">
-            <Loader2 className="h-6 w-6 animate-spin text-accent" />
-          </div>
-        ) : poems.length > 0 ? (
-          <>
-            <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-              {poems.map((poem, i) => (
-                <div key={poem.id} className="animate-fade-in" style={{ animationDelay: `${Math.min(i, 5) * 100}ms` }}>
-                  <PoemCard poem={poem} locale={locale as Locale} />
-                </div>
-              ))}
-            </div>
-            {hasNextPage && (
-              <div className="mt-8 flex justify-center">
-                <button onClick={() => fetchNextPage()} disabled={isFetchingNextPage}
-                  className="inline-flex items-center gap-2 rounded-md bg-secondary px-6 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-secondary/80 disabled:opacity-50">
-                  {isFetchingNextPage ? <><Loader2 className="h-4 w-4 animate-spin" /> {t("loading")}</> : t("load_more")}
-                </button>
-              </div>
-            )}
-          </>
-        ) : (
-          <div className="flex flex-col items-center py-20 text-center">
-            <Search className="h-10 w-10 text-muted-foreground/40 mb-3" />
-            <p className="text-muted-foreground">{t("no_poems_found")}</p>
-          </div>
-        )}
+        <PoemGrid
+          key={gridKey}
+          source={source}
+          language={language}
+          activeStyle={activeStyle}
+          committedSearch={committedSearch}
+          locale={locale as Locale}
+          t={t}
+        />
       </main>
 
       <Footer />
