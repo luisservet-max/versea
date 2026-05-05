@@ -41,14 +41,14 @@ const PoemCard = ({ poem, locale: localeProp }: PoemCardProps) => {
     tagTranslations[tag]?.[locale] ?? tag.charAt(0).toUpperCase() + tag.slice(1);
 
   return (
-    <article className="group rounded-lg border border-border bg-card p-5 transition-all hover:shadow-md hover:border-accent/40">
+    <article className="group rounded-lg border border-border bg-card p-5 transition-all hover:shadow-md hover:border-accent/40 overflow-hidden w-full min-w-0">
       <Link to={`/poem/${poem.id}`} className="block">
-        <h3 className="font-display text-lg font-semibold text-foreground group-hover:text-accent transition-colors">
+        <h3 className="font-display text-lg font-semibold text-foreground group-hover:text-accent transition-colors truncate">
           {poem.title}
         </h3>
       </Link>
 
-      <p className="mt-1 text-sm">
+      <p className="mt-1 text-sm truncate">
         <span className="text-muted-foreground">{t("by")} </span>
         {!poem.is_classic && poem.user_id ? (
           <Link
@@ -77,7 +77,7 @@ const PoemCard = ({ poem, locale: localeProp }: PoemCardProps) => {
       </p>
 
       <Link to={`/poem/${poem.id}`} className="block">
-        <pre className="mt-2 whitespace-pre font-body text-xs leading-relaxed text-foreground/80 line-clamp-4 max-w-prose overflow-x-hidden">
+        <pre className="mt-2 whitespace-pre-wrap break-words font-body text-xs leading-relaxed text-foreground/80 line-clamp-4 overflow-hidden">
           {poem.excerpt || poem.content.split("\n").slice(0, 2).join("\n")}
         </pre>
       </Link>
@@ -131,3 +131,4 @@ const PoemCard = ({ poem, locale: localeProp }: PoemCardProps) => {
 };
 
 export default PoemCard;
+
