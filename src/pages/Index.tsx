@@ -115,7 +115,6 @@ const FilterDropdown = ({
   );
 };
 
-// Poem grid component — gets a key prop so it fully re-mounts when filters change
 interface PoemGridProps {
   source: SourceFilter;
   language: string | null;
@@ -241,17 +240,14 @@ const Index = () => {
   const { data: hotPoems = [], isLoading: hotLoading } = useHotPoems({ source, language, style: activeStyle });
 
   const showHot = !committedSearch;
-
-  // This key forces PoemGrid to fully re-mount when any filter changes
-  // which resets the infinite query and shows fresh results
   const gridKey = `${source}-${language}-${activeStyle}-${committedSearch}`;
 
   return (
     <div className="min-h-screen flex flex-col">
       <Header />
 
-      {/* Hero */}
-      <section className="relative bg-parchment-warm py-20 md:py-28" style={{ zIndex: 20 }}>
+      {/* Hero — overflow-hidden prevents blur circles from overlapping filter bar */}
+      <section className="relative bg-parchment-warm py-20 md:py-28 overflow-hidden">
         <div className="container relative z-10 flex flex-col items-center text-center">
           <div className="flex items-center gap-2 rounded-full bg-accent/10 px-4 py-1.5 text-sm font-medium text-accent mb-6">
             <Feather className="h-4 w-4" />
@@ -310,8 +306,9 @@ const Index = () => {
             )}
           </div>
         </div>
-        <div className="absolute -right-20 -top-20 h-80 w-80 rounded-full bg-accent/5 blur-3xl" />
-        <div className="absolute -bottom-20 -left-20 h-60 w-60 rounded-full bg-sage/5 blur-3xl" />
+        {/* pointer-events-none ensures these decorative circles never block clicks */}
+        <div className="pointer-events-none absolute -right-20 -top-20 h-80 w-80 rounded-full bg-accent/5 blur-3xl" />
+        <div className="pointer-events-none absolute -bottom-20 -left-20 h-60 w-60 rounded-full bg-sage/5 blur-3xl" />
       </section>
 
       {/* Filter bar */}
@@ -390,7 +387,6 @@ const Index = () => {
           </div>
         )}
 
-        {/* All poems — key forces full re-mount on any filter change */}
         <h2 className="font-display text-2xl font-semibold text-foreground mb-6">
           {activeStyle
             ? <>{t("featured_poems")} — <span className="text-accent italic">{styleTranslations[activeStyle]?.[locale as Locale] ?? activeStyle}</span></>
@@ -414,4 +410,5 @@ const Index = () => {
 };
 
 export default Index;
+
 
