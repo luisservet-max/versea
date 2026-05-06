@@ -153,9 +153,9 @@ const PoemGrid = ({ source, language, activeStyle, committedSearch, locale, t }:
 
   return (
     <>
-      <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-5 lg:grid-cols-3 w-full">
         {poems.map((poem, i) => (
-          <div key={poem.id} className="animate-fade-in" style={{ animationDelay: `${Math.min(i, 5) * 100}ms` }}>
+          <div key={poem.id} className="animate-fade-in w-full min-w-0" style={{ animationDelay: `${Math.min(i, 5) * 100}ms` }}>
             <PoemCard poem={poem} locale={locale} />
           </div>
         ))}
@@ -246,9 +246,9 @@ const Index = () => {
     <div className="min-h-screen flex flex-col">
       <Header />
 
-      {/* Hero — overflow-hidden prevents blur circles from overlapping filter bar */}
+      {/* Hero */}
       <section className="relative bg-parchment-warm py-20 md:py-28 overflow-hidden">
-        <div className="container relative z-10 flex flex-col items-center text-center">
+        <div className="container relative z-10 flex flex-col items-center text-center px-4">
           <div className="flex items-center gap-2 rounded-full bg-accent/10 px-4 py-1.5 text-sm font-medium text-accent mb-6">
             <Feather className="h-4 w-4" />
             {t("hero_badge")}
@@ -306,14 +306,13 @@ const Index = () => {
             )}
           </div>
         </div>
-        {/* pointer-events-none ensures these decorative circles never block clicks */}
         <div className="pointer-events-none absolute -right-20 -top-20 h-80 w-80 rounded-full bg-accent/5 blur-3xl" />
         <div className="pointer-events-none absolute -bottom-20 -left-20 h-60 w-60 rounded-full bg-sage/5 blur-3xl" />
       </section>
 
       {/* Filter bar */}
       <section className="border-b border-border bg-card">
-        <div className="container py-4 flex flex-wrap items-center gap-2">
+        <div className="container px-4 py-4 flex flex-wrap items-center gap-2">
           {([
             { key: "all" as SourceFilter, label: t("filter_all"), icon: null },
             { key: "classic" as SourceFilter, label: t("filter_classic"), icon: <Library className="h-3 w-3" /> },
@@ -360,7 +359,7 @@ const Index = () => {
         </div>
       </section>
 
-      <main className="container flex-1 py-10">
+      <main className="w-full max-w-screen-xl mx-auto px-4 flex-1 py-10">
         {/* Trending */}
         {showHot && (
           <div className="mb-12">
@@ -373,9 +372,9 @@ const Index = () => {
                 <Loader2 className="h-6 w-6 animate-spin text-accent" />
               </div>
             ) : hotPoems.length > 0 ? (
-              <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-5 lg:grid-cols-3 w-full">
                 {hotPoems.map((poem, i) => (
-                  <div key={poem.id} className="animate-fade-in" style={{ animationDelay: `${Math.min(i, 5) * 80}ms` }}>
+                  <div key={poem.id} className="animate-fade-in w-full min-w-0" style={{ animationDelay: `${Math.min(i, 5) * 80}ms` }}>
                     <PoemCard poem={poem} locale={locale as Locale} />
                   </div>
                 ))}
@@ -410,5 +409,3 @@ const Index = () => {
 };
 
 export default Index;
-
-
