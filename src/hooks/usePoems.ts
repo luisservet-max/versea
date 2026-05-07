@@ -40,7 +40,6 @@ function mapPoem(row: any): PoemWithAuthor {
 
 const PAGE_SIZE = 18;
 
-// Trending: top 6 by likes in the past 30 days, respecting active filters
 export const useHotPoems = (options?: {
   source?: "all" | "classic" | "community";
   language?: string | null;
@@ -186,6 +185,7 @@ export const usePublishPoem = () => {
       queryClient.invalidateQueries({ queryKey: ["available-styles"] });
       queryClient.invalidateQueries({ queryKey: ["available-languages"] });
       queryClient.invalidateQueries({ queryKey: ["hot-poems"] });
+      queryClient.invalidateQueries({ queryKey: ["recent-community-poems"] });
     },
   });
 };
@@ -228,6 +228,7 @@ export const useUpdatePoem = () => {
       queryClient.invalidateQueries({ queryKey: ["my-poems"] });
       queryClient.invalidateQueries({ queryKey: ["poem", data.id] });
       queryClient.invalidateQueries({ queryKey: ["available-styles"] });
+      queryClient.invalidateQueries({ queryKey: ["recent-community-poems"] });
     },
   });
 };
@@ -245,6 +246,7 @@ export const useDeletePoem = () => {
       queryClient.invalidateQueries({ queryKey: ["my-poems"] });
       queryClient.invalidateQueries({ queryKey: ["available-styles"] });
       queryClient.invalidateQueries({ queryKey: ["hot-poems"] });
+      queryClient.invalidateQueries({ queryKey: ["recent-community-poems"] });
     },
   });
 };
