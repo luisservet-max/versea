@@ -22,8 +22,7 @@ const Header = () => {
 
   const navItems = [
     { to: "/", label: t("nav_discover"), icon: Search },
-    { to: "/feed", label: t("nav_feed"), icon: Activity },
-    { to: "/find-people", label: t("nav_find_people"), icon: Users },
+    { to: "/people", label: "People", icon: Users },
     { to: "/catalog", label: t("nav_catalog"), icon: BookOpen },
     { to: "/portfolio", label: t("nav_poems"), icon: Feather },
   ];
@@ -123,9 +122,7 @@ const Header = () => {
               key={to}
               to={to}
               className={`flex flex-1 flex-col items-center gap-0.5 py-2 text-xs font-medium transition-colors ${
-                isActive
-                  ? "text-accent"
-                  : "text-muted-foreground"
+                isActive ? "text-accent" : "text-muted-foreground"
               }`}
             >
               <Icon className="h-4 w-4" />
