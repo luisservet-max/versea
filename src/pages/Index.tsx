@@ -7,10 +7,46 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { languageTranslations, styleTranslations, type Locale } from "@/i18n/translations";
 import { supabase } from "@/integrations/supabase/client";
 import { useState, useRef, useEffect, useCallback } from "react";
-import { Feather, Search, Loader2, Library, Users, Globe, Sparkles, ChevronDown, X, User, BookOpen, Flame } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { Search, Loader2, Library, Users, Globe, Sparkles, ChevronDown, X, User, BookOpen, Flame, Feather } from "lucide-react";
 import { Link } from "react-router-dom";
+import { formatDistanceToNow } from "date-fns";
+import { es as esLocale, fr as frLocale } from "date-fns/locale";
 
 type SourceFilter = "all" | "classic" | "community";
+
+// Recent community poems hook
+const useRecentCommunityPoems = () => {
+  return useQuery({
+    queryKey: ["recent-community-poems"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("poems")
+        .select("id, title, excerpt, content, author_name, user_id, created_at, language, style, tags")
+        .not("user_id", "is", null)
+        .order("created_at", { ascending: false })
+        .limit(6);
+      if (error) throw error;
+
+      // Get avatars for authors
+      const userIds = [...new Set((data || []).map((p: any) => p.user_id))];
+      const { data: profiles } = await supabase
+        .from("profiles")
+        .select("user_id, display_name, avatar_url")
+        .in("user_id", userIds);
+      const profileMap: Record<string, any> = {};
+      (profiles || []).forEach((p: any) => { profileMap[p.user_id] = p; });
+
+      return (data || []).map((p: any) => ({
+        ...p,
+        is_classic: false,
+        display_name: profileMap[p.user_id]?.display_name || p.author_name || "Poet",
+        avatar_url: profileMap[p.user_id]?.avatar_url || null,
+      }));
+    },
+    staleTime: 2 * 60 * 1000,
+  });
+};
 
 interface FilterDropdownProps {
   label: string;
@@ -185,11 +221,13 @@ const Index = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [committedSearch, setCommittedSearch] = useState("");
 
-  const [suggestions, setSuggestions] = useState<{ type: "poem" | "author" | "classic_author"; id: string; label: string }[]>([]);
+  const [suggestions, setSuggestions] = useState<{ type: "author" | "classic_author"; id: string; label: string }[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [sugLoading, setSugLoading] = useState(false);
   const searchRef = useRef<HTMLDivElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout>>();
+
+  const dateFnsLocale = locale === "es" ? esLocale : locale === "fr" ? frLocale : undefined;
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
@@ -233,36 +271,28 @@ const Index = () => {
 
   const { data: availableLanguages = [] } = useAvailableLanguages();
   const { data: availableStyles = [] } = useAvailableStyles();
+  const { data: hotPoems = [], isLoading: hotLoading } = useHotPoems({ source, language, style: activeStyle });
+  const { data: recentCommunity = [], isLoading: recentLoading } = useRecentCommunityPoems();
 
   const translatedLanguages = availableLanguages.map((l) => languageTranslations[l]?.[locale as Locale] ?? l);
   const translatedStyles = availableStyles.map((s) => styleTranslations[s]?.[locale as Locale] ?? s);
 
-  const { data: hotPoems = [], isLoading: hotLoading } = useHotPoems({ source, language, style: activeStyle });
-
   const showHot = !committedSearch;
+  const showRecent = !committedSearch && source === "all";
   const gridKey = `${source}-${language}-${activeStyle}-${committedSearch}`;
 
   return (
     <div className="min-h-screen flex flex-col">
       <Header />
 
-      {/* Hero */}
-      <section className="relative bg-parchment-warm py-20 md:py-28 overflow-hidden">
-        <div className="container relative z-10 flex flex-col items-center text-center px-4">
-          <div className="flex items-center gap-2 rounded-full bg-accent/10 px-4 py-1.5 text-sm font-medium text-accent mb-6">
-            <Feather className="h-4 w-4" />
-            {t("hero_badge")}
-          </div>
-          <h1 className="font-display text-4xl font-bold leading-tight text-foreground md:text-6xl max-w-3xl">
-            {t("hero_title_1")}
-            <span className="italic text-accent">{t("hero_title_accent")}</span>
-            {t("hero_title_2")}
-          </h1>
-          <p className="mt-4 max-w-lg text-lg text-muted-foreground">{t("hero_subtitle")}</p>
+      {/* Search + filter bar — compact, no hero */}
+      <section className="border-b border-border bg-parchment-warm">
+        <div className="w-full max-w-screen-xl mx-auto px-4 py-4">
 
-          <div ref={searchRef} className="relative z-50 mt-8 w-full max-w-md">
-            <div className="flex items-center gap-2 rounded-lg border border-border bg-card px-4 py-2 shadow-sm focus-within:ring-2 focus-within:ring-accent/30">
-              <Search className="h-4 w-4 text-muted-foreground" />
+          {/* Search */}
+          <div ref={searchRef} className="relative mb-4">
+            <div className="flex items-center gap-2 rounded-lg border border-border bg-card px-4 py-2.5 shadow-sm focus-within:ring-2 focus-within:ring-accent/30">
+              <Search className="h-4 w-4 text-muted-foreground shrink-0" />
               <input
                 type="text"
                 value={searchQuery}
@@ -273,7 +303,7 @@ const Index = () => {
                 className="flex-1 bg-transparent text-sm text-foreground placeholder:text-muted-foreground outline-none"
               />
               {searchQuery && (
-                <button type="button" onClick={() => { setSearchQuery(""); commitSearch(""); }} className="text-muted-foreground hover:text-foreground">
+                <button type="button" onClick={() => { setSearchQuery(""); commitSearch(""); }} className="text-muted-foreground hover:text-foreground shrink-0">
                   <X className="h-4 w-4" />
                 </button>
               )}
@@ -305,70 +335,67 @@ const Index = () => {
               </div>
             )}
           </div>
-        </div>
-        <div className="pointer-events-none absolute -right-20 -top-20 h-80 w-80 rounded-full bg-accent/5 blur-3xl" />
-        <div className="pointer-events-none absolute -bottom-20 -left-20 h-60 w-60 rounded-full bg-sage/5 blur-3xl" />
-      </section>
 
-      {/* Filter bar */}
-      <section className="border-b border-border bg-card">
-        <div className="container px-4 py-4 flex flex-wrap items-center gap-2">
-          {([
-            { key: "all" as SourceFilter, label: t("filter_all"), icon: null },
-            { key: "classic" as SourceFilter, label: t("filter_classic"), icon: <Library className="h-3 w-3" /> },
-            { key: "community" as SourceFilter, label: t("filter_community"), icon: <Users className="h-3 w-3" /> },
-          ]).map(({ key, label, icon }) => (
-            <button
-              type="button"
-              key={key}
-              onClick={() => setSource(key)}
-              className={`flex items-center gap-1.5 shrink-0 rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
-                source === key
-                  ? "bg-accent text-accent-foreground"
-                  : "bg-secondary text-muted-foreground hover:text-foreground hover:bg-secondary/80"
-              }`}
-            >
-              {icon}
-              {label}
-            </button>
-          ))}
+          {/* Filters */}
+          <div className="flex flex-wrap items-center gap-2">
+            {([
+              { key: "all" as SourceFilter, label: t("filter_all"), icon: null },
+              { key: "classic" as SourceFilter, label: t("filter_classic"), icon: <Library className="h-3 w-3" /> },
+              { key: "community" as SourceFilter, label: t("filter_community"), icon: <Users className="h-3 w-3" /> },
+            ]).map(({ key, label, icon }) => (
+              <button
+                type="button"
+                key={key}
+                onClick={() => setSource(key)}
+                className={`flex items-center gap-1.5 shrink-0 rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
+                  source === key
+                    ? "bg-accent text-accent-foreground"
+                    : "bg-secondary text-muted-foreground hover:text-foreground hover:bg-secondary/80"
+                }`}
+              >
+                {icon}
+                {label}
+              </button>
+            ))}
 
-          <div className="w-px h-6 bg-border mx-1" />
+            <div className="w-px h-6 bg-border mx-1" />
 
-          <FilterDropdown
-            label={t("filter_language")}
-            icon={<Globe className="h-3.5 w-3.5" />}
-            value={language}
-            displayOptions={translatedLanguages}
-            valueOptions={availableLanguages}
-            onChange={setLanguage}
-            placeholder={t("filter_search_languages")}
-            noResults={t("no_results")}
-          />
+            <FilterDropdown
+              label={t("filter_language")}
+              icon={<Globe className="h-3.5 w-3.5" />}
+              value={language}
+              displayOptions={translatedLanguages}
+              valueOptions={availableLanguages}
+              onChange={setLanguage}
+              placeholder={t("filter_search_languages")}
+              noResults={t("no_results")}
+            />
 
-          <FilterDropdown
-            label={t("filter_style")}
-            icon={<Sparkles className="h-3.5 w-3.5" />}
-            value={activeStyle}
-            displayOptions={translatedStyles}
-            valueOptions={availableStyles}
-            onChange={setActiveStyle}
-            placeholder={t("filter_search_styles")}
-            noResults={t("no_results")}
-          />
+            <FilterDropdown
+              label={t("filter_style")}
+              icon={<Sparkles className="h-3.5 w-3.5" />}
+              value={activeStyle}
+              displayOptions={translatedStyles}
+              valueOptions={availableStyles}
+              onChange={setActiveStyle}
+              placeholder={t("filter_search_styles")}
+              noResults={t("no_results")}
+            />
+          </div>
         </div>
       </section>
 
       <main className="w-full max-w-screen-xl mx-auto px-4 flex-1 py-10">
+
         {/* Trending */}
         {showHot && (
           <div className="mb-12">
-            <h2 className="font-display text-2xl font-semibold text-foreground mb-6 flex items-center gap-2">
+            <h2 className="font-display text-xl font-semibold text-foreground mb-5 flex items-center gap-2">
               <Flame className="h-5 w-5 text-accent" />
               Trending
             </h2>
             {hotLoading ? (
-              <div className="flex justify-center py-10">
+              <div className="flex justify-center py-8">
                 <Loader2 className="h-6 w-6 animate-spin text-accent" />
               </div>
             ) : hotPoems.length > 0 ? (
@@ -380,13 +407,77 @@ const Index = () => {
                 ))}
               </div>
             ) : (
-              <p className="text-sm text-muted-foreground">No trending poems yet for this filter.</p>
+              <p className="text-sm text-muted-foreground">No trending poems yet — be the first to like something!</p>
             )}
             <div className="mt-8 border-t border-border" />
           </div>
         )}
 
-        <h2 className="font-display text-2xl font-semibold text-foreground mb-6">
+        {/* Recently shared by the community */}
+        {showRecent && recentCommunity.length > 0 && (
+          <div className="mb-12">
+            <div className="flex items-center justify-between mb-5">
+              <h2 className="font-display text-xl font-semibold text-foreground flex items-center gap-2">
+                <Feather className="h-5 w-5 text-accent" />
+                Recently shared by the community
+              </h2>
+              <button
+                type="button"
+                onClick={() => setSource("community")}
+                className="text-xs text-muted-foreground hover:text-accent transition-colors"
+              >
+                See all →
+              </button>
+            </div>
+            {recentLoading ? (
+              <div className="flex justify-center py-8">
+                <Loader2 className="h-6 w-6 animate-spin text-accent" />
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {recentCommunity.slice(0, 4).map((poem: any) => (
+                  <Link
+                    key={poem.id}
+                    to={`/poem/${poem.id}`}
+                    className="flex items-start gap-4 rounded-xl border border-border bg-card p-4 transition-all hover:border-accent/40 hover:shadow-sm group"
+                  >
+                    {/* Avatar */}
+                    <div className="shrink-0">
+                      {poem.avatar_url ? (
+                        <img src={poem.avatar_url} alt={poem.display_name}
+                          className="h-9 w-9 rounded-full object-cover border border-border" />
+                      ) : (
+                        <div className="h-9 w-9 rounded-full bg-secondary flex items-center justify-center border border-border">
+                          <User className="h-4 w-4 text-muted-foreground" />
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Content */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between gap-2 mb-1">
+                        <span className="text-sm font-medium text-foreground">{poem.display_name}</span>
+                        <span className="text-xs text-muted-foreground shrink-0">
+                          {formatDistanceToNow(new Date(poem.created_at), { addSuffix: true, locale: dateFnsLocale })}
+                        </span>
+                      </div>
+                      <p className="font-display text-sm font-semibold text-foreground group-hover:text-accent transition-colors truncate">
+                        {poem.title}
+                      </p>
+                      <p className="mt-0.5 text-xs text-muted-foreground line-clamp-2 whitespace-pre-wrap break-words">
+                        {poem.excerpt || poem.content?.split("\n").slice(0, 2).join(" ")}
+                      </p>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            )}
+            <div className="mt-8 border-t border-border" />
+          </div>
+        )}
+
+        {/* All poems */}
+        <h2 className="font-display text-xl font-semibold text-foreground mb-5">
           {activeStyle
             ? <>{t("featured_poems")} — <span className="text-accent italic">{styleTranslations[activeStyle]?.[locale as Locale] ?? activeStyle}</span></>
             : t("featured_poems")}
