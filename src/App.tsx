@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Route, Routes } from "react-router-dom";
+import { BrowserRouter, Route, Routes, Navigate } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -13,8 +13,7 @@ import Auth from "./pages/Auth.tsx";
 import NotFound from "./pages/NotFound.tsx";
 import AuthorProfilePage from "./pages/AuthorProfile.tsx";
 import ClassicAuthorProfile from "./pages/ClassicAuthorProfile.tsx";
-import Feed from "./pages/Feed.tsx";
-import FindPeople from "./pages/FindPeople.tsx";
+import People from "./pages/People.tsx";
 import Profile from "./pages/Profile.tsx";
 import ResetPassword from "./pages/ResetPassword.tsx";
 
@@ -34,8 +33,10 @@ const App = () => (
               <Route path="/poem/:id" element={<PoemDetail />} />
               <Route path="/author/:userId" element={<AuthorProfilePage />} />
               <Route path="/classic-author/:authorName" element={<ClassicAuthorProfile />} />
-              <Route path="/feed" element={<Feed />} />
-              <Route path="/find-people" element={<FindPeople />} />
+              <Route path="/people" element={<People />} />
+              {/* Redirect old routes to /people for backwards compatibility */}
+              <Route path="/feed" element={<Navigate to="/people" replace />} />
+              <Route path="/find-people" element={<Navigate to="/people" replace />} />
               <Route path="/catalog" element={<Catalog />} />
               <Route path="/portfolio" element={<Portfolio />} />
               <Route path="/profile" element={<Profile />} />
